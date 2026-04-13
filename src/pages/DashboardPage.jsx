@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { calcMacros, findFoodByText, n, parseSmartEntry } from "../lib/foodUtils";
-import { calcProfileTargets } from "../lib/profileUtils";
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -27,16 +26,30 @@ function formatDateTime(value) {
 
 export function DashboardPage({ session }) {
   const userId = session.user.id;
+
   const [slots, setSlots] = useState([]);
   const [foods, setFoods] = useState([]);
   const [meals, setMeals] = useState([]);
   const [waterEntries, setWaterEntries] = useState([]);
-  const [goals, setGoals] = useState({ kcal: 2200, protein: 200, carbs: 220, fat: 65 });
+  const [profile, setProfile] = useState(null);
+
+  const [goals, setGoals] = useState({
+    kcal: 2200,
+    protein: 200,
+    carbs: 220,
+    fat: 65,
+  });
+
   const [status, setStatus] = useState("");
   const [activeTab, setActiveTab] = useState("resumo");
-  const [profile, setProfile] = useState(null);
+
   const [slotForm, setSlotForm] = useState({ name: "" });
-  const [smartForm, setSmartForm] = useState({ slotId: "", text: "" });
+
+  const [smartForm, setSmartForm] = useState({
+    slotId: "",
+    text: "",
+  });
+
   const [manualForm, setManualForm] = useState({
     slotId: "",
     food_name: "",
@@ -48,6 +61,7 @@ export function DashboardPage({ session }) {
   });
 
   const [waterInput, setWaterInput] = useState("");
+
   const [editingMealId, setEditingMealId] = useState(null);
   const [editingMealForm, setEditingMealForm] = useState({
     meal_slot_id: "",
@@ -68,12 +82,12 @@ export function DashboardPage({ session }) {
     const tomorrowStr = tomorrow.toISOString().slice(0, 10);
 
     const [
-      { data: slotData },
-      { data: foodData },
-      { data: mealData },
-      { data: daily },
-      { data: waterData },
-      { data: profileData },
+      { data: slotData, error: slotError },
+      { data: foodData, error: foodError },
+      { data: mealData, error: mealError },
+      { data: daily, error: dailyError },
+      { data: waterData, error: waterError },
+      { data: profileData, error: profileError },
     ] = await Promise.all([
       supabase
         .from("meal_slots")
@@ -105,14 +119,28 @@ export function DashboardPage({ session }) {
         .from("user_profiles")
         .select("*")
         .eq("user_id", userId)
-        .maybeSingle(),  
+        .maybeSingle(),
     ]);
+
+    const firstError =
+      slotError ||
+      foodError ||
+      mealError ||
+      dailyError ||
+      waterError ||
+      profileError;
+
+    if (firstError) {
+      console.error(firstError);
+      setStatus(firstError.message);
+      return;
+    }
 
     setSlots(slotData ?? []);
     setFoods(foodData ?? []);
     setMeals(mealData ?? []);
     setWaterEntries(waterData ?? []);
-    setProfile(profileData || null);
+    setProfile(profileData ?? null);
 
     if (daily) {
       setGoals({
@@ -121,21 +149,19 @@ export function DashboardPage({ session }) {
         carbs: daily.carb_goal ?? 220,
         fat: daily.fat_goal ?? 65,
       });
-    }
-
-    if ((slotData ?? []).length > 0) {
-      const first = slotData[0].id;
-      setSmartForm((p) => ({ ...p, slotId: p.slotId || first }));
-      setManualForm((p) => ({ ...p, slotId: p.slotId || first }));
-    }
-
-    if (profileData && !daily) {
+    } else if (profileData) {
       setGoals({
         kcal: profileData.target_calories ?? 2200,
         protein: profileData.target_protein_g ?? 200,
         carbs: profileData.target_carbs_g ?? 220,
         fat: profileData.target_fat_g ?? 65,
       });
+    }
+
+    if ((slotData ?? []).length > 0) {
+      const first = slotData[0].id;
+      setSmartForm((p) => ({ ...p, slotId: p.slotId || first }));
+      setManualForm((p) => ({ ...p, slotId: p.slotId || first }));
     }
   }
 
@@ -408,8 +434,8 @@ export function DashboardPage({ session }) {
     <div className="app-shell clay-bg">
       <div className="topbar">
         <div>
-          <h1>Matheus Tracker v15</h1>
-          <p>Claymorphism + edição de comida e água</p>
+          <h1>Matheus Tracker</h1>
+          <p>Dashboard</p>
         </div>
         <button className="clay-btn" onClick={signOut}>Sair</button>
       </div>
@@ -432,6 +458,18 @@ export function DashboardPage({ session }) {
         <div className="grid-2">
           <div className="card clay-card">
             <h2>Resumo do dia</h2>
+
+            {profile && (
+              <div className="profile-summary clay-soft">
+                <strong>{profile.full_name || "Perfil"}</strong>
+                <div className="muted">
+                  {profile.weight_kg}kg • {profile.height_cm}cm • {profile.age} anos
+                </div>
+                <div className="muted">
+                  Objetivo: {profile.goal} • Atividade: {profile.activity_level}
+                </div>
+              </div>
+            )}
 
             <div className="metric-block">
               <div className="metric-head">
@@ -494,17 +532,6 @@ export function DashboardPage({ session }) {
                 <button className="clay-btn" onClick={addCustomWater}>Adicionar</button>
               </div>
             </div>
-            {profile && (
-              <div className="profile-summary clay-soft">
-                <strong>{profile.full_name || "Perfil"}</strong>
-                <div className="muted">
-                  {profile.weight_kg}kg • {profile.height_cm}cm • {profile.age} anos
-                </div>
-                <div className="muted">
-                  Objetivo: {profile.goal} • Atividade: {profile.activity_level}
-                </div>
-              </div>
-            )}
 
             <div className="quick-section">
               <label>Metas</label>

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { supabase } from "../lib/supabase";
-import { calcProfileTargets } from "../lib/profileUtils";
+import { calcProfileTargets, n } from "../lib/profileUtils";
 
 export function OnboardingPage({ session, onDone }) {
   const [form, setForm] = useState({
@@ -13,21 +13,52 @@ export function OnboardingPage({ session, onDone }) {
     goal: "emagrecer",
   });
   const [status, setStatus] = useState("");
+  const [saving, setSaving] = useState(false);
 
   async function saveProfile(e) {
     e.preventDefault();
-    const targets = calcProfileTargets(form);
 
-    const payload = {
-      user_id: session.user.id,
-      ...form,
-      ...targets,
-      updated_at: new Date().toISOString(),
-    };
+    if (!form.full_name || !form.age || !form.weight_kg || !form.height_cm) {
+      setStatus("Preencha nome, idade, peso e altura.");
+      return;
+    }
 
-    const { error } = await supabase.from("user_profiles").upsert(payload);
-    setStatus(error ? error.message : "Perfil salvo.");
-    if (!error) onDone();
+    setSaving(true);
+    setStatus("Salvando perfil...");
+
+    try {
+      const normalized = {
+        ...form,
+        age: n(form.age),
+        weight_kg: n(form.weight_kg),
+        height_cm: n(form.height_cm),
+      };
+
+      const targets = calcProfileTargets(normalized);
+
+      const payload = {
+        user_id: session.user.id,
+        ...normalized,
+        ...targets,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase.from("user_profiles").upsert(payload);
+
+      if (error) {
+        console.error(error);
+        setStatus(error.message);
+        setSaving(false);
+        return;
+      }
+
+      setStatus("Perfil salvo com sucesso.");
+      onDone();
+    } catch (err) {
+      console.error(err);
+      setStatus("Erro ao salvar perfil.");
+      setSaving(false);
+    }
   }
 
   return (
@@ -84,7 +115,10 @@ export function OnboardingPage({ session, onDone }) {
           </select>
         </div>
 
-        <button type="submit" className="clay-btn">Salvar perfil</button>
+        <button type="submit" className="clay-btn" disabled={saving}>
+          {saving ? "Salvando..." : "Salvar perfil"}
+        </button>
+
         {status && <div className="status-box clay-soft">{status}</div>}
       </form>
     </div>
