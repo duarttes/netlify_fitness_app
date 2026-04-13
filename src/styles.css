@@ -326,3 +326,31 @@ label {
   display: block;
   margin-bottom: 6px;
 }
+
+.suggestions-box {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.suggestion-item {
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #e9eef5;
+  box-shadow:
+    6px 6px 12px rgba(163, 177, 198, 0.45),
+    -6px -6px 12px rgba(255, 255, 255, 0.85);
+  display: grid;
+  gap: 4px;
+}
+
+.suggestion-item strong {
+  font-size: 14px;
+}
+
+.suggestion-item span {
+  font-size: 12px;
+  color: #64748b;
+}

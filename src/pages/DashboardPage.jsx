@@ -33,6 +33,8 @@ export function DashboardPage({ session }) {
   const [meals, setMeals] = useState([]);
   const [waterEntries, setWaterEntries] = useState([]);
   const [profile, setProfile] = useState(null);
+  const [foodSuggestions, setFoodSuggestions] = useState([]);
+  const [editingFoodSuggestions, setEditingFoodSuggestions] = useState([]);
 
   const [goals, setGoals] = useState({
     kcal: 2200,
@@ -220,6 +222,74 @@ export function DashboardPage({ session }) {
     setStatus(error ? error.message : "Metas salvas.");
     if (!error) await loadAll();
   }
+
+  function updateFoodSuggestions(value) {
+  if (!value.trim()) {
+    setFoodSuggestions([]);
+    return;
+  }
+
+  const q = value.toLowerCase();
+
+  const matches = foods
+    .filter((food) => {
+      const names = [food.name, ...(food.aliases || [])].map((x) => String(x).toLowerCase());
+      return names.some((name) => name.includes(q));
+    })
+    .slice(0, 6);
+
+  setFoodSuggestions(matches);
+}
+
+function updateEditingFoodSuggestions(value) {
+  if (!value.trim()) {
+    setEditingFoodSuggestions([]);
+    return;
+  }
+
+  const q = value.toLowerCase();
+
+  const matches = foods
+    .filter((food) => {
+      const names = [food.name, ...(food.aliases || [])].map((x) => String(x).toLowerCase());
+      return names.some((name) => name.includes(q));
+    })
+    .slice(0, 6);
+
+  setEditingFoodSuggestions(matches);
+}
+
+function selectSuggestedFood(food) {
+  const macros = calcMacros(food, manualForm.quantity_g || food.unit_weight_g || 100);
+
+  setManualForm((p) => ({
+    ...p,
+    food_name: food.name,
+    quantity_g: String(macros.quantity_g),
+    calories: String(macros.calories),
+    protein_g: String(macros.protein_g),
+    carbs_g: String(macros.carbs_g),
+    fat_g: String(macros.fat_g),
+  }));
+
+  setFoodSuggestions([]);
+}
+
+function selectEditingSuggestedFood(food) {
+  const macros = calcMacros(food, editingMealForm.quantity_g || food.unit_weight_g || 100);
+
+  setEditingMealForm((p) => ({
+    ...p,
+    food_name: food.name,
+    quantity_g: String(macros.quantity_g),
+    calories: String(macros.calories),
+    protein_g: String(macros.protein_g),
+    carbs_g: String(macros.carbs_g),
+    fat_g: String(macros.fat_g),
+  }));
+
+  setEditingFoodSuggestions([]);
+}
 
   async function saveProfile() {
     const normalized = {
@@ -702,8 +772,30 @@ export function DashboardPage({ session }) {
                           <label>Alimento</label>
                           <input
                             value={editingMealForm.food_name}
-                            onChange={(e) => setEditingMealForm({ ...editingMealForm, food_name: e.target.value })}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setEditingMealForm({ ...editingMealForm, food_name: value });
+                              updateEditingFoodSuggestions(value);
+                            }}
                           />
+
+                          {editingFoodSuggestions.length > 0 && (
+                            <div className="suggestions-box">
+                              {editingFoodSuggestions.map((food) => (
+                                <button
+                                  type="button"
+                                  key={food.id}
+                                  className="suggestion-item"
+                                  onClick={() => selectEditingSuggestedFood(food)}
+                                >
+                                  <strong>{food.name}</strong>
+                                  <span>
+                                    {food.calories_100g} kcal • P {food.protein_100g} • C {food.carbs_100g} • G {food.fat_100g}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         <div>
@@ -859,14 +951,36 @@ export function DashboardPage({ session }) {
                 </select>
               </div>
 
-              <div>
-                <label>Ingrediente</label>
-                <input
-                  value={manualForm.food_name}
-                  onChange={(e) => setManualForm({ ...manualForm, food_name: e.target.value })}
-                  placeholder="Ex.: ovo cozido"
-                />
-              </div>
+            <div>
+              <label>Ingrediente</label>
+              <input
+                value={manualForm.food_name}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setManualForm({ ...manualForm, food_name: value });
+                  updateFoodSuggestions(value);
+                }}
+                placeholder="Ex.: ovo cozido"
+              />
+
+              {foodSuggestions.length > 0 && (
+                <div className="suggestions-box">
+                  {foodSuggestions.map((food) => (
+                    <button
+                      type="button"
+                      key={food.id}
+                      className="suggestion-item"
+                      onClick={() => selectSuggestedFood(food)}
+                    >
+                      <strong>{food.name}</strong>
+                      <span>
+                        {food.calories_100g} kcal • P {food.protein_100g} • C {food.carbs_100g} • G {food.fat_100g}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
               <div>
                 <label>Peso (g)</label>
@@ -1020,6 +1134,7 @@ export function DashboardPage({ session }) {
       )}
     </div>
   );
+
 }
 
 function EditableSlot({ slot, onRename, onDeactivate }) {
