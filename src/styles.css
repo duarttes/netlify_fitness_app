@@ -295,3 +295,14 @@ label {
     grid-template-columns: 1fr;
   }
 }
+
+.profile-summary {
+  padding: 14px;
+  border-radius: 18px;
+  margin-bottom: 14px;
+}
+
+.profile-summary strong {
+  display: block;
+  margin-bottom: 6px;
+}

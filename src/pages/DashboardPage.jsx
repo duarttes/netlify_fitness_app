@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { calcMacros, findFoodByText, n, parseSmartEntry } from "../lib/foodUtils";
+import { calcProfileTargets } from "../lib/profileUtils";
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -33,7 +34,7 @@ export function DashboardPage({ session }) {
   const [goals, setGoals] = useState({ kcal: 2200, protein: 200, carbs: 220, fat: 65 });
   const [status, setStatus] = useState("");
   const [activeTab, setActiveTab] = useState("resumo");
-
+  const [profile, setProfile] = useState(null);
   const [slotForm, setSlotForm] = useState({ name: "" });
   const [smartForm, setSmartForm] = useState({ slotId: "", text: "" });
   const [manualForm, setManualForm] = useState({
@@ -72,6 +73,7 @@ export function DashboardPage({ session }) {
       { data: mealData },
       { data: daily },
       { data: waterData },
+      { data: profileData },
     ] = await Promise.all([
       supabase
         .from("meal_slots")
@@ -99,12 +101,18 @@ export function DashboardPage({ session }) {
         .gte("created_at", `${TODAY}T00:00:00`)
         .lt("created_at", `${tomorrowStr}T00:00:00`)
         .order("created_at", { ascending: false }),
+      supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle(),  
     ]);
 
     setSlots(slotData ?? []);
     setFoods(foodData ?? []);
     setMeals(mealData ?? []);
     setWaterEntries(waterData ?? []);
+    setProfile(profileData || null);
 
     if (daily) {
       setGoals({
@@ -119,6 +127,15 @@ export function DashboardPage({ session }) {
       const first = slotData[0].id;
       setSmartForm((p) => ({ ...p, slotId: p.slotId || first }));
       setManualForm((p) => ({ ...p, slotId: p.slotId || first }));
+    }
+
+    if (profileData && !daily) {
+      setGoals({
+        kcal: profileData.target_calories ?? 2200,
+        protein: profileData.target_protein_g ?? 200,
+        carbs: profileData.target_carbs_g ?? 220,
+        fat: profileData.target_fat_g ?? 65,
+      });
     }
   }
 
@@ -477,6 +494,17 @@ export function DashboardPage({ session }) {
                 <button className="clay-btn" onClick={addCustomWater}>Adicionar</button>
               </div>
             </div>
+            {profile && (
+              <div className="profile-summary clay-soft">
+                <strong>{profile.full_name || "Perfil"}</strong>
+                <div className="muted">
+                  {profile.weight_kg}kg • {profile.height_cm}cm • {profile.age} anos
+                </div>
+                <div className="muted">
+                  Objetivo: {profile.goal} • Atividade: {profile.activity_level}
+                </div>
+              </div>
+            )}
 
             <div className="quick-section">
               <label>Metas</label>
