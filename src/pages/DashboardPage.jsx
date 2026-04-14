@@ -1287,8 +1287,8 @@ export function DashboardPage({ session }) {
                   <EditableSlot
                     key={slot.id}
                     slot={slot}
-                    onRename={renameMealSlot}
-                    onDeactivate={deactivateMealSlot}
+                    onRename={renameSlot}
+                    onDeactivate={deactivateSlot}
                   />
                 ))}
               </div>
@@ -1393,29 +1393,49 @@ export function DashboardPage({ session }) {
                 <span className="section-badge">gasto</span>
               </div>
 
-              <div className="quick-exercise-buttons">
-                <button
-                  className="clay-btn"
-                  type="button"
-                  onClick={() => addExerciseQuick("Musculação", 250)}
-                >
-                  Musculação
-                </button>
-                <button
-                  className="clay-btn"
-                  type="button"
-                  onClick={() => addExerciseQuick("Esteira", 150)}
-                >
-                  Esteira
-                </button>
-                <button
-                  className="clay-btn"
-                  type="button"
-                  onClick={() => addExerciseQuick("Bike", 200)}
-                >
-                  Bike
-                </button>
-              </div>
+                <div className="quick-exercise-buttons">
+                  <button
+                    className="clay-btn"
+                    type="button"
+                    onClick={() =>
+                      setExerciseForm({
+                        ...exerciseForm,
+                        exercise_name: "Musculação",
+                        calories_burned: "250",
+                      })
+                    }
+                  >
+                    Musculação
+                  </button>
+
+                  <button
+                    className="clay-btn"
+                    type="button"
+                    onClick={() =>
+                      setExerciseForm({
+                        ...exerciseForm,
+                        exercise_name: "Esteira",
+                        calories_burned: "150",
+                      })
+                    }
+                  >
+                    Esteira
+                  </button>
+
+                  <button
+                    className="clay-btn"
+                    type="button"
+                    onClick={() =>
+                      setExerciseForm({
+                        ...exerciseForm,
+                        exercise_name: "Bike",
+                        calories_burned: "200",
+                      })
+                    }
+                  >
+                    Bike
+                  </button>
+                </div>
 
               <div className="exercise-inline">
                 <input
