@@ -1015,192 +1015,296 @@ async function toggleSupplementCheck(supplement) {
       {activeTab === "lancamento" && (
         <div className="launch-layout">
           <div className="launch-main">
-            <h2>Lançamento inteligente</h2>
-            <div className="stack">
-            <div>
-              <label>Refeição</label>
-              <div className="inline-slot-row">
-                <select
-                  value={smartForm.slotId}
-                  onChange={(e) => setSmartForm({ ...smartForm, slotId: e.target.value })}
-                >
-                  {slots.map((slot) => (
-                    <option key={slot.id} value={slot.id}>
-                      {slot.name}
-                    </option>
-                  ))}
-                </select>
-
-                <input
-                  value={slotForm.name}
-                  onChange={(e) => setSlotForm({ name: e.target.value })}
-                  placeholder="Nova refeição"
-                />
-
-                <button className="launch-side" onClick={addSlot}>+</button>
-              </div>
-            </div>
-
-              <div>
-                <label>Digite alimento + peso</label>
-                <input
-                  value={smartForm.text}
-                  onChange={(e) => setSmartForm({ ...smartForm, text: e.target.value })}
-                  placeholder="Ex.: 1 ovo cozido, banana 120g, arroz 100g"
-                />
+            <div className="card clay-card">
+              <div className="section-head">
+                <h2>Lançar alimento</h2>
+                <span className="section-badge">Hoje</span>
               </div>
 
-              <button className="clay-btn" onClick={addSmartMeal}>Adicionar com inteligência</button>
-            </div>
-          </div>
-
-          <div className="card clay-card">
-            <h2>Lançamento manual</h2>
-            <div className="stack">
-            <div>
-              <label>Refeição</label>
-              <div className="inline-slot-row">
-                <select
-                  value={manualForm.slotId}
-                  onChange={(e) => setManualForm({ ...manualForm, slotId: e.target.value })}
-                >
-                  {slots.map((slot) => (
-                    <option key={slot.id} value={slot.id}>
-                      {slot.name}
-                    </option>
-                  ))}
-                </select>
-
-                <input
-                  value={slotForm.name}
-                  onChange={(e) => setSlotForm({ name: e.target.value })}
-                  placeholder="Nova refeição"
-                />
-
-                <button className="clay-btn" onClick={addSlot}>+</button>
-              </div>
-            </div>
-
-            <div>
-              <label>Ingrediente</label>
-              <input
-                value={manualForm.food_name}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setManualForm({ ...manualForm, food_name: value });
-                  updateFoodSuggestions(value);
-                }}
-                placeholder="Ex.: ovo cozido"
-              />
-
-              {foodSuggestions.length > 0 && (
-                <div className="suggestions-box">
-                  {foodSuggestions.map((food) => (
-                    <button
-                      type="button"
-                      key={food.id}
-                      className="suggestion-item"
-                      onClick={() => selectSuggestedFood(food)}
-                    >
-                      <strong>{food.name}</strong>
-                      <span>
-                        {food.calories_100g} kcal • P {food.protein_100g} • C {food.carbs_100g} • G {food.fat_100g}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-              <div>
-                <label>Peso (g)</label>
-                <input
-                  value={manualForm.quantity_g}
-                  onChange={(e) => setManualForm({ ...manualForm, quantity_g: e.target.value })}
-                  placeholder="Ex.: 50"
-                />
-              </div>
-
-              <button className="clay-btn" onClick={autofillManual}>Preencher macros automaticamente</button>
-
-              <div className="grid-2">
-                <div>
-                  <label>Kcal</label>
-                  <input value={manualForm.calories} onChange={(e) => setManualForm({ ...manualForm, calories: e.target.value })} />
-                </div>
-                <div>
-                  <label>Proteína</label>
-                  <input value={manualForm.protein_g} onChange={(e) => setManualForm({ ...manualForm, protein_g: e.target.value })} />
-                </div>
-                <div>
-                  <label>Carbo</label>
-                  <input value={manualForm.carbs_g} onChange={(e) => setManualForm({ ...manualForm, carbs_g: e.target.value })} />
-                </div>
-                <div>
-                  <label>Gordura</label>
-                  <input value={manualForm.fat_g} onChange={(e) => setManualForm({ ...manualForm, fat_g: e.target.value })} />
-                </div>
-              </div>
-
-              <button className="clay-btn" onClick={addManualMeal}>Salvar manual</button>
-            </div>
-          </div>
-              <div className="card clay-card">
-                <h2>Remédios / manipulados / vitaminas</h2>
-
-                <div className="stack">
-                  <div className="grid-2">
-                    <div>
-                      <label>Nome</label>
-                      <input
-                        value={supplementForm.name}
-                        onChange={(e) => setSupplementForm({ ...supplementForm, name: e.target.value })}
-                        placeholder="Ex.: Creatina"
-                      />
-                    </div>
-
-                    <div>
-                      <label>Dosagem</label>
-                      <input
-                        value={supplementForm.dosage}
-                        onChange={(e) => setSupplementForm({ ...supplementForm, dosage: e.target.value })}
-                        placeholder="Ex.: 5g, 2 cápsulas"
-                      />
-                    </div>
+              <div className="launch-stack">
+                <div className="launch-card clay-soft">
+                  <div className="section-head section-head-sm">
+                    <h3>Lançamento inteligente</h3>
+                    <span className="section-mini">rápido</span>
                   </div>
 
-                  <button className="clay-btn" onClick={addSupplementToCatalog}>
+                  <div className="stack">
+                    <div>
+                      <label>Refeição</label>
+
+                      <div className="inline-slot-row">
+                        <select
+                          value={smartForm.slotId}
+                          onChange={(e) => setSmartForm({ ...smartForm, slotId: e.target.value })}
+                        >
+                          {slots.map((slot) => (
+                            <option key={slot.id} value={slot.id}>
+                              {slot.name}
+                            </option>
+                          ))}
+                        </select>
+
+                        <div className="inline-create-row">
+                          <input
+                            value={slotForm.name}
+                            onChange={(e) => setSlotForm({ name: e.target.value })}
+                            placeholder="Nova refeição"
+                          />
+                          <button
+                            className="clay-btn icon-btn"
+                            type="button"
+                            onClick={createMealSlot}
+                            aria-label="Criar refeição"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label>Digite alimento + peso</label>
+                      <textarea
+                        rows={4}
+                        value={smartForm.text}
+                        onChange={(e) => setSmartForm({ ...smartForm, text: e.target.value })}
+                        placeholder="Ex.: 1 ovo cozido, banana 120g, arroz 100g"
+                      />
+                      <div className="helper-text">
+                        Exemplos: 2 ovos, banana 120g, arroz 100g
+                      </div>
+                    </div>
+
+                    <div className="action-row">
+                      <button className="clay-btn" type="button" onClick={addSmartMeal}>
+                        Adicionar com inteligência
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="launch-card clay-soft">
+                  <div className="section-head section-head-sm">
+                    <h3>Lançamento manual</h3>
+                    <span className="section-mini">controle total</span>
+                  </div>
+
+                  <div className="stack">
+                    <div>
+                      <label>Refeição</label>
+
+                      <div className="inline-slot-row">
+                        <select
+                          value={manualForm.slotId}
+                          onChange={(e) => setManualForm({ ...manualForm, slotId: e.target.value })}
+                        >
+                          {slots.map((slot) => (
+                            <option key={slot.id} value={slot.id}>
+                              {slot.name}
+                            </option>
+                          ))}
+                        </select>
+
+                        <div className="inline-create-row">
+                          <input
+                            value={slotForm.name}
+                            onChange={(e) => setSlotForm({ name: e.target.value })}
+                            placeholder="Nova refeição"
+                          />
+                          <button
+                            className="clay-btn icon-btn"
+                            type="button"
+                            onClick={createMealSlot}
+                            aria-label="Criar refeição"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label>Ingrediente</label>
+                      <input
+                        value={manualForm.food_name}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setManualForm({ ...manualForm, food_name: value });
+                          updateFoodSuggestions(value);
+                        }}
+                        placeholder="Ex.: ovo cozido"
+                      />
+
+                      {foodSuggestions.length > 0 && (
+                        <div className="suggestions-box">
+                          {foodSuggestions.map((food) => (
+                            <button
+                              key={food.name}
+                              className="suggestion-item"
+                              type="button"
+                              onClick={() => selectSuggestedFood(food)}
+                            >
+                              <strong>{food.name}</strong>
+                              <span>
+                                {food.calories_100g} kcal • P {food.protein_100g} • C {food.carbs_100g} • G{" "}
+                                {food.fat_100g}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="manual-grid">
+                      <div>
+                        <label>Peso (g)</label>
+                        <input
+                          value={manualForm.quantity_g}
+                          onChange={(e) => setManualForm({ ...manualForm, quantity_g: e.target.value })}
+                          placeholder="Ex.: 50"
+                        />
+                      </div>
+
+                      <div className="manual-grid-actions">
+                        <label className="label-hidden">Ação</label>
+                        <button
+                          className="clay-btn"
+                          type="button"
+                          onClick={fillMacrosFromFood}
+                        >
+                          Preencher macros automaticamente
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="macro-grid">
+                      <div>
+                        <label>Kcal</label>
+                        <input
+                          value={manualForm.calories}
+                          onChange={(e) => setManualForm({ ...manualForm, calories: e.target.value })}
+                        />
+                      </div>
+
+                      <div>
+                        <label>Proteína</label>
+                        <input
+                          value={manualForm.protein_g}
+                          onChange={(e) => setManualForm({ ...manualForm, protein_g: e.target.value })}
+                        />
+                      </div>
+
+                      <div>
+                        <label>Carbo</label>
+                        <input
+                          value={manualForm.carbs_g}
+                          onChange={(e) => setManualForm({ ...manualForm, carbs_g: e.target.value })}
+                        />
+                      </div>
+
+                      <div>
+                        <label>Gordura</label>
+                        <input
+                          value={manualForm.fat_g}
+                          onChange={(e) => setManualForm({ ...manualForm, fat_g: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="action-row">
+                      <button className="clay-btn" type="button" onClick={saveManualMeal}>
+                        Salvar manual
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="launch-side">
+            <div className="card clay-card">
+              <div className="section-head">
+                <h2>Refeições</h2>
+                <span className="section-count">{slots.length}</span>
+              </div>
+
+              <div className="stack">
+                {slots.map((slot) => (
+                  <EditableSlot
+                    key={slot.id}
+                    slot={slot}
+                    onRename={renameMealSlot}
+                    onDeactivate={deactivateMealSlot}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="card clay-card">
+              <div className="section-head">
+                <h2>Suplementos</h2>
+                <span className="section-badge">rotina</span>
+              </div>
+
+              <div className="stack">
+                <div className="supplement-form-grid">
+                  <div>
+                    <label>Nome</label>
+                    <input
+                      value={supplementForm.name}
+                      onChange={(e) => setSupplementForm({ ...supplementForm, name: e.target.value })}
+                      placeholder="Ex.: Creatina"
+                    />
+                  </div>
+
+                  <div>
+                    <label>Dosagem</label>
+                    <input
+                      value={supplementForm.dosage}
+                      onChange={(e) => setSupplementForm({ ...supplementForm, dosage: e.target.value })}
+                      placeholder="Ex.: 5g, 2 cápsulas"
+                    />
+                  </div>
+                </div>
+
+                <div className="action-row">
+                  <button className="clay-btn" type="button" onClick={saveSupplement}>
                     Adicionar à rotina
                   </button>
                 </div>
 
-                <div className="top-space">
+                <div className="supplement-manage-list">
                   {supplementCatalog.length === 0 ? (
-                    <p>Nenhum item cadastrado.</p>
+                    <p className="muted">Nenhum item cadastrado.</p>
                   ) : (
                     supplementCatalog.map((item) => {
                       const checked = supplementCheckedToday(item.id);
 
                       return (
-                        <div className="list-item clay-soft compact-item" key={item.id}>
-                          <div>
+                        <div key={item.id} className="manage-item clay-soft">
+                          <div className="manage-item-body">
                             <strong>{item.name}</strong>
                             <div className="muted">{item.dosage || "Sem dosagem"}</div>
                             {checked?.checked_at && (
-                              <div className="muted">Tomado: {formatDateTime(checked.checked_at)}</div>
+                              <div className="muted">
+                                Tomado: {formatDateTime(checked.checked_at)}
+                              </div>
                             )}
                           </div>
 
-                          <div className="actions-row">
+                          <div className="manage-item-actions">
                             <button
-                              className={`clay-btn ${checked ? "success" : ""}`}
+                              className="clay-btn"
+                              type="button"
                               onClick={() => toggleSupplementCheck(item)}
                             >
                               {checked ? "Tomado" : "Marcar"}
                             </button>
 
                             <button
-                              className="clay-btn danger"
+                              className="clay-btn danger-btn"
+                              type="button"
                               onClick={() => deleteSupplementCatalog(item.id)}
                             >
                               Excluir
@@ -1212,33 +1316,44 @@ async function toggleSupplementCheck(supplement) {
                   )}
                 </div>
               </div>
-                  <div className="card clay-card">
+            </div>
+
+            <div className="card clay-card">
+              <div className="section-head">
                 <h2>Exercícios rápidos</h2>
-
-                <div className="actions-row">
-                  <button className="clay-btn" onClick={() => addExerciseQuick("Musculação", 250)}>Musculação</button>
-                  <button className="clay-btn" onClick={() => addExerciseQuick("Esteira", 150)}>Esteira</button>
-                  <button className="clay-btn" onClick={() => addExerciseQuick("Bike", 200)}>Bike</button>
-                </div>
-
-                <div className="quick-inline top-space">
-                  <input
-                    placeholder="Ex: HIIT"
-                    value={exerciseForm.exercise_name}
-                    onChange={(e) => setExerciseForm({ ...exerciseForm, exercise_name: e.target.value })}
-                  />
-                  <input
-                    placeholder="kcal"
-                    value={exerciseForm.calories_burned}
-                    onChange={(e) => setExerciseForm({ ...exerciseForm, calories_burned: e.target.value })}
-                  />
-                  <button className="clay-btn" onClick={addExercise}>+</button>
-                </div>
+                <span className="section-badge">gasto</span>
               </div>
+
+              <div className="quick-exercise-buttons">
+                <button className="clay-btn" type="button" onClick={() => addExerciseQuick("Musculação", 250)}>
+                  Musculação
+                </button>
+                <button className="clay-btn" type="button" onClick={() => addExerciseQuick("Esteira", 150)}>
+                  Esteira
+                </button>
+                <button className="clay-btn" type="button" onClick={() => addExerciseQuick("Bike", 200)}>
+                  Bike
+                </button>
+              </div>
+
+              <div className="exercise-inline">
+                <input
+                  value={exerciseForm.exercise_name}
+                  onChange={(e) => setExerciseForm({ ...exerciseForm, exercise_name: e.target.value })}
+                  placeholder="Ex.: Escada"
+                />
+                <input
+                  value={exerciseForm.calories_burned}
+                  onChange={(e) => setExerciseForm({ ...exerciseForm, calories_burned: e.target.value })}
+                  placeholder="kcal"
+                />
+                <button className="clay-btn icon-btn" type="button" onClick={saveExercise}>
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-        
-        
-      
       )}
 
       {activeTab === "historico" && (
