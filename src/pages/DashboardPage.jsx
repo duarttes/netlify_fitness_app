@@ -1,6 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { calcMacros, findFoodByText, n, parseSmartEntry } from "../lib/foodUtils";
+import {
+  calcMacros,
+  findFoodByText,
+  n,
+  parseSmartEntry,
+} from "../lib/foodUtils";
 import { calcProfileTargets } from "../lib/profileUtils";
 
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -10,7 +15,10 @@ function Progress({ value, max, color = "green" }) {
 
   return (
     <div className="progress-track">
-      <div className={`progress-fill ${color}`} style={{ width: `${percent}%` }} />
+      <div
+        className={`progress-fill ${color}`}
+        style={{ width: `${percent}%` }}
+      />
     </div>
   );
 }
@@ -47,18 +55,18 @@ export function DashboardPage({ session }) {
   const [editingFoodSuggestions, setEditingFoodSuggestions] = useState([]);
   const [supplementCatalog, setSupplementCatalog] = useState([]);
   const [supplementLogs, setSupplementLogs] = useState([]);
-  
+
   const [supplementForm, setSupplementForm] = useState({
     name: "",
     dosage: "",
   });
 
   const TAB_ITEMS = [
-  { id: "resumo", label: "Resumo" },
-  { id: "lancamento", label: "Lançar" },
-  { id: "historico", label: "Histórico" },
-  { id: "perfil", label: "Perfil" },
-];
+    { id: "resumo", label: "Resumo" },
+    { id: "lancamento", label: "Lançar" },
+    { id: "historico", label: "Histórico" },
+    { id: "perfil", label: "Perfil" },
+  ];
 
   const [goals, setGoals] = useState({
     kcal: 2200,
@@ -265,102 +273,18 @@ export function DashboardPage({ session }) {
         acc.fat += n(item.fat_g);
         return acc;
       },
-      { kcal: 0, protein: 0, carbs: 0, fat: 0 }
+      { kcal: 0, protein: 0, carbs: 0, fat: 0 },
     );
   }, [meals]);
 
   const exerciseTotalKcal = useMemo(() => {
-    return exerciseEntries.reduce((acc, item) => acc + n(item.calories_burned), 0);
+    return exerciseEntries.reduce(
+      (acc, item) => acc + n(item.calories_burned),
+      0,
+    );
   }, [exerciseEntries]);
 
   const netCalories = Math.max(0, totals.kcal - exerciseTotalKcal);
-
-  function supplementCheckedToday(supplementId) {
-  return supplementLogs.find((item) => item.supplement_id === supplementId && item.checked);
-}
-
-async function toggleSupplementCheck(supplement) {
-  const existing = supplementLogs.find((item) => item.supplement_id === supplement.id);
-
-  if (existing) {
-    const { error } = await supabase
-      .from("supplement_logs")
-      .update({
-        checked: !existing.checked,
-        checked_at: !existing.checked ? new Date().toISOString() : null,
-      })
-      .eq("id", existing.id);
-
-    setStatus(error ? error.message : "Checklist atualizado.");
-  } else {
-    const { error } = await supabase.from("supplement_logs").insert({
-      user_id: userId,
-      supplement_id: supplement.id,
-      log_date: TODAY,
-      checked: true,
-      checked_at: new Date().toISOString(),
-    });
-
-    setStatus(error ? error.message : "Checklist atualizado.");
-  }
-
-  await loadAll();
-}
-
-async function addSupplementToCatalog() {
-  if (!supplementForm.name.trim()) return;
-
-  const { error } = await supabase.from("supplement_catalog").insert({
-    user_id: userId,
-    name: supplementForm.name,
-    dosage: supplementForm.dosage,
-  });
-
-  setStatus(error ? error.message : "Suplemento cadastrado.");
-  if (!error) setSupplementForm({ name: "", dosage: "" });
-  await loadAll();
-}
-
-async function deleteSupplementCatalog(id) {
-  const { error } = await supabase
-    .from("supplement_catalog")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", userId);
-
-  setStatus(error ? error.message : "Suplemento removido.");
-  await loadAll();
-}
-
-async function addExercise() {
-  if (!exerciseForm.exercise_name.trim()) return;
-
-  const { error } = await supabase.from("exercise_entries").insert({
-    user_id: userId,
-    log_date: TODAY,
-    exercise_name: exerciseForm.exercise_name,
-    calories_burned: n(exerciseForm.calories_burned),
-    notes: exerciseForm.notes,
-  });
-
-  setStatus(error ? error.message : "Exercício salvo.");
-  if (!error) {
-    setExerciseForm({ exercise_name: "", calories_burned: "", notes: "" });
-  }
-  await loadAll();
-}
-
-async function addExerciseQuick(name, kcal) {
-  const { error } = await supabase.from("exercise_entries").insert({
-    user_id: userId,
-    log_date: TODAY,
-    exercise_name: name,
-    calories_burned: kcal,
-  });
-
-  setStatus(error ? error.message : "Exercício salvo.");
-  await loadAll();
-}
 
   const waterTotalMl = useMemo(() => {
     return waterEntries.reduce((acc, item) => acc + n(item.amount_ml), 0);
@@ -384,72 +308,82 @@ async function addExerciseQuick(name, kcal) {
   }
 
   function updateFoodSuggestions(value) {
-  if (!value.trim()) {
+    if (!value.trim()) {
+      setFoodSuggestions([]);
+      return;
+    }
+
+    const q = value.toLowerCase();
+
+    const matches = foods
+      .filter((food) => {
+        const names = [food.name, ...(food.aliases || [])].map((x) =>
+          String(x).toLowerCase(),
+        );
+        return names.some((name) => name.includes(q));
+      })
+      .slice(0, 6);
+
+    setFoodSuggestions(matches);
+  }
+
+  function updateEditingFoodSuggestions(value) {
+    if (!value.trim()) {
+      setEditingFoodSuggestions([]);
+      return;
+    }
+
+    const q = value.toLowerCase();
+
+    const matches = foods
+      .filter((food) => {
+        const names = [food.name, ...(food.aliases || [])].map((x) =>
+          String(x).toLowerCase(),
+        );
+        return names.some((name) => name.includes(q));
+      })
+      .slice(0, 6);
+
+    setEditingFoodSuggestions(matches);
+  }
+
+  function selectSuggestedFood(food) {
+    const macros = calcMacros(
+      food,
+      manualForm.quantity_g || food.unit_weight_g || 100,
+    );
+
+    setManualForm((p) => ({
+      ...p,
+      food_name: food.name,
+      quantity_g: String(macros.quantity_g),
+      calories: String(macros.calories),
+      protein_g: String(macros.protein_g),
+      carbs_g: String(macros.carbs_g),
+      fat_g: String(macros.fat_g),
+    }));
+
     setFoodSuggestions([]);
-    return;
   }
 
-  const q = value.toLowerCase();
+  function selectEditingSuggestedFood(food) {
+    const macros = calcMacros(
+      food,
+      editingMealForm.quantity_g || food.unit_weight_g || 100,
+    );
 
-  const matches = foods
-    .filter((food) => {
-      const names = [food.name, ...(food.aliases || [])].map((x) => String(x).toLowerCase());
-      return names.some((name) => name.includes(q));
-    })
-    .slice(0, 6);
+    setEditingMealForm((p) => ({
+      ...p,
+      food_name: food.name,
+      quantity_g: String(macros.quantity_g),
+      calories: String(macros.calories),
+      protein_g: String(macros.protein_g),
+      carbs_g: String(macros.carbs_g),
+      fat_g: String(macros.fat_g),
+    }));
 
-  setFoodSuggestions(matches);
-}
-
-function updateEditingFoodSuggestions(value) {
-  if (!value.trim()) {
     setEditingFoodSuggestions([]);
-    return;
   }
-
-  const q = value.toLowerCase();
-
-  const matches = foods
-    .filter((food) => {
-      const names = [food.name, ...(food.aliases || [])].map((x) => String(x).toLowerCase());
-      return names.some((name) => name.includes(q));
-    })
-    .slice(0, 6);
-
-  setEditingFoodSuggestions(matches);
-}
-
-function selectSuggestedFood(food) {
-  const macros = calcMacros(food, manualForm.quantity_g || food.unit_weight_g || 100);
-
-  setManualForm((p) => ({
-    ...p,
-    food_name: food.name,
-    quantity_g: String(macros.quantity_g),
-    calories: String(macros.calories),
-    protein_g: String(macros.protein_g),
-    carbs_g: String(macros.carbs_g),
-    fat_g: String(macros.fat_g),
-  }));
-
-  setFoodSuggestions([]);
-}
-
-function selectEditingSuggestedFood(food) {
-  const macros = calcMacros(food, editingMealForm.quantity_g || food.unit_weight_g || 100);
-
-  setEditingMealForm((p) => ({
-    ...p,
-    food_name: food.name,
-    quantity_g: String(macros.quantity_g),
-    calories: String(macros.calories),
-    protein_g: String(macros.protein_g),
-    carbs_g: String(macros.carbs_g),
-    fat_g: String(macros.fat_g),
-  }));
-
-  setEditingFoodSuggestions([]);
-}
 
   async function saveProfile() {
     const normalized = {
@@ -592,7 +526,10 @@ function selectEditingSuggestedFood(food) {
     const food = findFoodByText(manualForm.food_name, foods);
     if (!food) return setStatus("Não encontrei esse alimento.");
 
-    const macros = calcMacros(food, manualForm.quantity_g || food.unit_weight_g || 100);
+    const macros = calcMacros(
+      food,
+      manualForm.quantity_g || food.unit_weight_g || 100,
+    );
 
     setManualForm((p) => ({
       ...p,
@@ -622,7 +559,10 @@ function selectEditingSuggestedFood(food) {
   function autofillEditingMeal() {
     const food = findFoodByText(editingMealForm.food_name, foods);
     if (!food) return setStatus("Não encontrei esse alimento.");
-    const macros = calcMacros(food, editingMealForm.quantity_g || food.unit_weight_g || 100);
+    const macros = calcMacros(
+      food,
+      editingMealForm.quantity_g || food.unit_weight_g || 100,
+    );
 
     setEditingMealForm((p) => ({
       ...p,
@@ -705,7 +645,10 @@ function selectEditingSuggestedFood(food) {
   }
 
   async function deleteWater(id) {
-    const { error } = await supabase.from("water_entries").delete().eq("id", id);
+    const { error } = await supabase
+      .from("water_entries")
+      .delete()
+      .eq("id", id);
     setStatus(error ? error.message : "Água removida.");
     await loadAll();
   }
@@ -715,106 +658,110 @@ function selectEditingSuggestedFood(food) {
   }
 
   async function addExercise() {
-  if (!exerciseForm.exercise_name.trim()) return;
+    if (!exerciseForm.exercise_name.trim()) return;
 
-  const { error } = await supabase.from("exercise_entries").insert({
-    user_id: userId,
-    log_date: TODAY,
-    exercise_name: exerciseForm.exercise_name,
-    calories_burned: n(exerciseForm.calories_burned),
-    notes: exerciseForm.notes,
-  });
-
-  setStatus(error ? error.message : "Exercício salvo.");
-  if (!error) {
-    setExerciseForm({ exercise_name: "", calories_burned: "", notes: "" });
-  }
-  await loadAll();
-}
-
-function startEditExercise(item) {
-  setEditingExerciseId(item.id);
-  setEditingExerciseForm({
-    exercise_name: item.exercise_name || "",
-    calories_burned: String(item.calories_burned || ""),
-    notes: item.notes || "",
-  });
-}
-
-async function saveExerciseEdit(id) {
-  const { error } = await supabase
-    .from("exercise_entries")
-    .update({
-      exercise_name: editingExerciseForm.exercise_name,
-      calories_burned: n(editingExerciseForm.calories_burned),
-      notes: editingExerciseForm.notes,
-    })
-    .eq("id", id)
-    .eq("user_id", userId);
-
-  setStatus(error ? error.message : "Exercício atualizado.");
-  if (!error) setEditingExerciseId(null);
-  await loadAll();
-}
-
-async function deleteExercise(id) {
-  const { error } = await supabase
-    .from("exercise_entries")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", userId);
-
-  setStatus(error ? error.message : "Exercício removido.");
-  await loadAll();
-}
-
-async function addSupplementToCatalog() {
-  if (!supplementForm.name.trim()) return;
-
-  const { error } = await supabase.from("supplement_catalog").insert({
-    user_id: userId,
-    name: supplementForm.name,
-    dosage: supplementForm.dosage,
-  });
-
-  setStatus(error ? error.message : "Suplemento cadastrado.");
-  if (!error) {
-    setSupplementForm({ name: "", dosage: "" });
-  }
-  await loadAll();
-}
-
-function supplementCheckedToday(supplementId) {
-  return supplementLogs.find((item) => item.supplement_id === supplementId && item.checked);
-}
-
-async function toggleSupplementCheck(supplement) {
-  const existing = supplementLogs.find((item) => item.supplement_id === supplement.id);
-
-  if (existing) {
-    const { error } = await supabase
-      .from("supplement_logs")
-      .update({
-        checked: !existing.checked,
-        checked_at: !existing.checked ? new Date().toISOString() : null,
-      })
-      .eq("id", existing.id);
-
-    setStatus(error ? error.message : "Checklist atualizado.");
-  } else {
-    const { error } = await supabase.from("supplement_logs").insert({
+    const { error } = await supabase.from("exercise_entries").insert({
       user_id: userId,
-      supplement_id: supplement.id,
       log_date: TODAY,
-      checked: true,
-      checked_at: new Date().toISOString(),
+      exercise_name: exerciseForm.exercise_name,
+      calories_burned: n(exerciseForm.calories_burned),
+      notes: exerciseForm.notes,
     });
 
-    setStatus(error ? error.message : "Checklist atualizado.");
+    setStatus(error ? error.message : "Exercício salvo.");
+    if (!error) {
+      setExerciseForm({ exercise_name: "", calories_burned: "", notes: "" });
+    }
+    await loadAll();
   }
 
-  await loadAll();
-}
+  function startEditExercise(item) {
+    setEditingExerciseId(item.id);
+    setEditingExerciseForm({
+      exercise_name: item.exercise_name || "",
+      calories_burned: String(item.calories_burned || ""),
+      notes: item.notes || "",
+    });
+  }
+
+  async function saveExerciseEdit(id) {
+    const { error } = await supabase
+      .from("exercise_entries")
+      .update({
+        exercise_name: editingExerciseForm.exercise_name,
+        calories_burned: n(editingExerciseForm.calories_burned),
+        notes: editingExerciseForm.notes,
+      })
+      .eq("id", id)
+      .eq("user_id", userId);
+
+    setStatus(error ? error.message : "Exercício atualizado.");
+    if (!error) setEditingExerciseId(null);
+    await loadAll();
+  }
+
+  async function deleteExercise(id) {
+    const { error } = await supabase
+      .from("exercise_entries")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId);
+
+    setStatus(error ? error.message : "Exercício removido.");
+    await loadAll();
+  }
+
+  async function addSupplementToCatalog() {
+    if (!supplementForm.name.trim()) return;
+
+    const { error } = await supabase.from("supplement_catalog").insert({
+      user_id: userId,
+      name: supplementForm.name,
+      dosage: supplementForm.dosage,
+    });
+
+    setStatus(error ? error.message : "Suplemento cadastrado.");
+    if (!error) {
+      setSupplementForm({ name: "", dosage: "" });
+    }
+    await loadAll();
+  }
+
+  function supplementCheckedToday(supplementId) {
+    return supplementLogs.find(
+      (item) => item.supplement_id === supplementId && item.checked,
+    );
+  }
+
+  async function toggleSupplementCheck(supplement) {
+    const existing = supplementLogs.find(
+      (item) => item.supplement_id === supplement.id,
+    );
+
+    if (existing) {
+      const { error } = await supabase
+        .from("supplement_logs")
+        .update({
+          checked: !existing.checked,
+          checked_at: !existing.checked ? new Date().toISOString() : null,
+        })
+        .eq("id", existing.id);
+
+      setStatus(error ? error.message : "Checklist atualizado.");
+    } else {
+      const { error } = await supabase.from("supplement_logs").insert({
+        user_id: userId,
+        supplement_id: supplement.id,
+        log_date: TODAY,
+        checked: true,
+        checked_at: new Date().toISOString(),
+      });
+
+      setStatus(error ? error.message : "Checklist atualizado.");
+    }
+
+    await loadAll();
+  }
 
   async function deleteSupplementCatalog(id) {
     const { error } = await supabase
@@ -833,23 +780,29 @@ async function toggleSupplementCheck(supplement) {
         <div>
           <h1>Duarttes FIT</h1>
         </div>
-        <button className="clay-btn" onClick={signOut}>Sair</button>
+        <button className="clay-btn" onClick={signOut}>
+          Sair
+        </button>
       </div>
 
       {status && <div className="status-box clay-soft">{status}</div>}
 
-        <div className="tabs">
-          {TAB_ITEMS.map((tab) => (
-            <button
-              key={tab.id}
-              className={activeTab === tab.id ? "active clay-btn tab-btn" : "clay-btn tab-btn"}
-              onClick={() => setActiveTab(tab.id)}
-              type="button"
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+      <div className="tabs">
+        {TAB_ITEMS.map((tab) => (
+          <button
+            key={tab.id}
+            className={
+              activeTab === tab.id
+                ? "active clay-btn tab-btn"
+                : "clay-btn tab-btn"
+            }
+            onClick={() => setActiveTab(tab.id)}
+            type="button"
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       {activeTab === "resumo" && (
         <div className="summary-layout">
@@ -863,7 +816,8 @@ async function toggleSupplementCheck(supplement) {
               <div className="profile-summary clay-soft">
                 <strong>{profile.full_name || "Perfil"}</strong>
                 <div className="muted">
-                  {profile.weight_kg}kg • {profile.height_cm}cm • {profile.age} anos
+                  {profile.weight_kg}kg • {profile.height_cm}cm • {profile.age}{" "}
+                  anos
                 </div>
                 <div className="muted">
                   Objetivo: {profile.goal} • Atividade: {profile.activity_level}
@@ -876,16 +830,23 @@ async function toggleSupplementCheck(supplement) {
                 <div className="metric-title">Consumidas</div>
                 <div className="metric-value">{totals.kcal.toFixed(0)}</div>
                 <div className="metric-subtext">
-                  {Math.max(goals.kcal - totals.kcal, 0).toFixed(0)} kcal restantes
+                  {Math.max(goals.kcal - totals.kcal, 0).toFixed(0)} kcal
+                  restantes
                 </div>
                 <FancyBar value={totals.kcal} max={goals.kcal} color="green" />
               </div>
 
               <div className="metric-card clay-soft">
                 <div className="metric-title">Gastas</div>
-                <div className="metric-value">{exerciseTotalKcal.toFixed(0)}</div>
+                <div className="metric-value">
+                  {exerciseTotalKcal.toFixed(0)}
+                </div>
                 <div className="metric-subtext">Treino e atividades</div>
-                <FancyBar value={exerciseTotalKcal} max={goals.kcal} color="orange" />
+                <FancyBar
+                  value={exerciseTotalKcal}
+                  max={goals.kcal}
+                  color="orange"
+                />
               </div>
 
               <div className="metric-card clay-soft">
@@ -899,16 +860,24 @@ async function toggleSupplementCheck(supplement) {
                 <div className="metric-title">Proteína</div>
                 <div className="metric-value">{totals.protein.toFixed(1)}g</div>
                 <div className="metric-subtext">
-                  {Math.max(goals.protein - totals.protein, 0).toFixed(1)}g restantes
+                  {Math.max(goals.protein - totals.protein, 0).toFixed(1)}g
+                  restantes
                 </div>
-                <FancyBar value={totals.protein} max={goals.protein} color="purple" />
+                <FancyBar
+                  value={totals.protein}
+                  max={goals.protein}
+                  color="purple"
+                />
               </div>
 
               <div className="metric-card clay-soft">
                 <div className="metric-title">Água</div>
-                <div className="metric-value">{(waterTotalMl / 1000).toFixed(2)}L</div>
+                <div className="metric-value">
+                  {(waterTotalMl / 1000).toFixed(2)}L
+                </div>
                 <div className="metric-subtext">
-                  {Math.min((waterTotalMl / 3000) * 100, 100).toFixed(0)}% da meta
+                  {Math.min((waterTotalMl / 3000) * 100, 100).toFixed(0)}% da
+                  meta
                 </div>
                 <FancyBar value={waterTotalMl} max={3000} color="cyan" />
               </div>
@@ -923,9 +892,27 @@ async function toggleSupplementCheck(supplement) {
               </div>
 
               <div className="quick-water-buttons">
-                <button className="clay-btn" onClick={() => addWater(200)} type="button">+200 ml</button>
-                <button className="clay-btn" onClick={() => addWater(300)} type="button">+300 ml</button>
-                <button className="clay-btn" onClick={() => addWater(500)} type="button">+500 ml</button>
+                <button
+                  className="clay-btn"
+                  onClick={() => addWater(200)}
+                  type="button"
+                >
+                  +200 ml
+                </button>
+                <button
+                  className="clay-btn"
+                  onClick={() => addWater(300)}
+                  type="button"
+                >
+                  +300 ml
+                </button>
+                <button
+                  className="clay-btn"
+                  onClick={() => addWater(500)}
+                  type="button"
+                >
+                  +500 ml
+                </button>
               </div>
 
               <div className="quick-inline">
@@ -934,12 +921,20 @@ async function toggleSupplementCheck(supplement) {
                   onChange={(e) => setWaterInput(e.target.value)}
                   placeholder="Quantidade em ml"
                 />
-                <button className="clay-btn" onClick={addCustomWater} type="button">
+                <button
+                  className="clay-btn"
+                  onClick={addCustomWater}
+                  type="button"
+                >
                   Adicionar
                 </button>
               </div>
 
-              <button className="clay-btn small-btn" onClick={saveGoals} type="button">
+              <button
+                className="clay-btn small-btn"
+                onClick={saveGoals}
+                type="button"
+              >
                 Salvar metas
               </button>
             </div>
@@ -958,7 +953,9 @@ async function toggleSupplementCheck(supplement) {
                   {lastWater ? (
                     <>
                       <strong>{lastWater.amount_ml} ml</strong>
-                      <div className="muted">{formatDateTime(lastWater.created_at)}</div>
+                      <div className="muted">
+                        {formatDateTime(lastWater.created_at)}
+                      </div>
                     </>
                   ) : (
                     <div className="muted">Sem água registrada hoje</div>
@@ -971,10 +968,14 @@ async function toggleSupplementCheck(supplement) {
                     <>
                       <strong>{lastMeal.food_name}</strong>
                       <div className="muted">{lastMeal.meal_slot_name}</div>
-                      <div className="muted">{formatDateTime(lastMeal.created_at)}</div>
+                      <div className="muted">
+                        {formatDateTime(lastMeal.created_at)}
+                      </div>
                     </>
                   ) : (
-                    <div className="muted">Nenhuma refeição registrada hoje</div>
+                    <div className="muted">
+                      Nenhuma refeição registrada hoje
+                    </div>
                   )}
                 </div>
               </div>
@@ -983,7 +984,9 @@ async function toggleSupplementCheck(supplement) {
             <div className="card clay-card supplement-card">
               <div className="section-head">
                 <h2>Suplementos do dia</h2>
-                <span className="section-count">{supplementCatalog.length}</span>
+                <span className="section-count">
+                  {supplementCatalog.length}
+                </span>
               </div>
 
               <div className="supplement-grid">
@@ -1035,7 +1038,12 @@ async function toggleSupplementCheck(supplement) {
                       <div className="inline-slot-row">
                         <select
                           value={smartForm.slotId}
-                          onChange={(e) => setSmartForm({ ...smartForm, slotId: e.target.value })}
+                          onChange={(e) =>
+                            setSmartForm({
+                              ...smartForm,
+                              slotId: e.target.value,
+                            })
+                          }
                         >
                           {slots.map((slot) => (
                             <option key={slot.id} value={slot.id}>
@@ -1047,13 +1055,15 @@ async function toggleSupplementCheck(supplement) {
                         <div className="inline-create-row">
                           <input
                             value={slotForm.name}
-                            onChange={(e) => setSlotForm({ name: e.target.value })}
+                            onChange={(e) =>
+                              setSlotForm({ name: e.target.value })
+                            }
                             placeholder="Nova refeição"
                           />
                           <button
                             className="clay-btn icon-btn"
                             type="button"
-                            onClick={createMealSlot}
+                            onClick={addSlot}
                             aria-label="Criar refeição"
                           >
                             +
@@ -1067,7 +1077,9 @@ async function toggleSupplementCheck(supplement) {
                       <textarea
                         rows={4}
                         value={smartForm.text}
-                        onChange={(e) => setSmartForm({ ...smartForm, text: e.target.value })}
+                        onChange={(e) =>
+                          setSmartForm({ ...smartForm, text: e.target.value })
+                        }
                         placeholder="Ex.: 1 ovo cozido, banana 120g, arroz 100g"
                       />
                       <div className="helper-text">
@@ -1076,7 +1088,11 @@ async function toggleSupplementCheck(supplement) {
                     </div>
 
                     <div className="action-row">
-                      <button className="clay-btn" type="button" onClick={addSmartMeal}>
+                      <button
+                        className="clay-btn"
+                        type="button"
+                        onClick={addSmartMeal}
+                      >
                         Adicionar com inteligência
                       </button>
                     </div>
@@ -1096,7 +1112,12 @@ async function toggleSupplementCheck(supplement) {
                       <div className="inline-slot-row">
                         <select
                           value={manualForm.slotId}
-                          onChange={(e) => setManualForm({ ...manualForm, slotId: e.target.value })}
+                          onChange={(e) =>
+                            setManualForm({
+                              ...manualForm,
+                              slotId: e.target.value,
+                            })
+                          }
                         >
                           {slots.map((slot) => (
                             <option key={slot.id} value={slot.id}>
@@ -1108,13 +1129,15 @@ async function toggleSupplementCheck(supplement) {
                         <div className="inline-create-row">
                           <input
                             value={slotForm.name}
-                            onChange={(e) => setSlotForm({ name: e.target.value })}
+                            onChange={(e) =>
+                              setSlotForm({ name: e.target.value })
+                            }
                             placeholder="Nova refeição"
                           />
                           <button
                             className="clay-btn icon-btn"
                             type="button"
-                            onClick={createMealSlot}
+                            onClick={addSlot}
                             aria-label="Criar refeição"
                           >
                             +
@@ -1146,7 +1169,8 @@ async function toggleSupplementCheck(supplement) {
                             >
                               <strong>{food.name}</strong>
                               <span>
-                                {food.calories_100g} kcal • P {food.protein_100g} • C {food.carbs_100g} • G{" "}
+                                {food.calories_100g} kcal • P{" "}
+                                {food.protein_100g} • C {food.carbs_100g} • G{" "}
                                 {food.fat_100g}
                               </span>
                             </button>
@@ -1160,7 +1184,12 @@ async function toggleSupplementCheck(supplement) {
                         <label>Peso (g)</label>
                         <input
                           value={manualForm.quantity_g}
-                          onChange={(e) => setManualForm({ ...manualForm, quantity_g: e.target.value })}
+                          onChange={(e) =>
+                            setManualForm({
+                              ...manualForm,
+                              quantity_g: e.target.value,
+                            })
+                          }
                           placeholder="Ex.: 50"
                         />
                       </div>
@@ -1170,7 +1199,7 @@ async function toggleSupplementCheck(supplement) {
                         <button
                           className="clay-btn"
                           type="button"
-                          onClick={fillMacrosFromFood}
+                          onClick={autofillManual}
                         >
                           Preencher macros automaticamente
                         </button>
@@ -1182,7 +1211,12 @@ async function toggleSupplementCheck(supplement) {
                         <label>Kcal</label>
                         <input
                           value={manualForm.calories}
-                          onChange={(e) => setManualForm({ ...manualForm, calories: e.target.value })}
+                          onChange={(e) =>
+                            setManualForm({
+                              ...manualForm,
+                              calories: e.target.value,
+                            })
+                          }
                         />
                       </div>
 
@@ -1190,7 +1224,12 @@ async function toggleSupplementCheck(supplement) {
                         <label>Proteína</label>
                         <input
                           value={manualForm.protein_g}
-                          onChange={(e) => setManualForm({ ...manualForm, protein_g: e.target.value })}
+                          onChange={(e) =>
+                            setManualForm({
+                              ...manualForm,
+                              protein_g: e.target.value,
+                            })
+                          }
                         />
                       </div>
 
@@ -1198,7 +1237,12 @@ async function toggleSupplementCheck(supplement) {
                         <label>Carbo</label>
                         <input
                           value={manualForm.carbs_g}
-                          onChange={(e) => setManualForm({ ...manualForm, carbs_g: e.target.value })}
+                          onChange={(e) =>
+                            setManualForm({
+                              ...manualForm,
+                              carbs_g: e.target.value,
+                            })
+                          }
                         />
                       </div>
 
@@ -1206,13 +1250,22 @@ async function toggleSupplementCheck(supplement) {
                         <label>Gordura</label>
                         <input
                           value={manualForm.fat_g}
-                          onChange={(e) => setManualForm({ ...manualForm, fat_g: e.target.value })}
+                          onChange={(e) =>
+                            setManualForm({
+                              ...manualForm,
+                              fat_g: e.target.value,
+                            })
+                          }
                         />
                       </div>
                     </div>
 
                     <div className="action-row">
-                      <button className="clay-btn" type="button" onClick={saveManualMeal}>
+                      <button
+                        className="clay-btn"
+                        type="button"
+                        onClick={addManualMeal}
+                      >
                         Salvar manual
                       </button>
                     </div>
@@ -1253,7 +1306,12 @@ async function toggleSupplementCheck(supplement) {
                     <label>Nome</label>
                     <input
                       value={supplementForm.name}
-                      onChange={(e) => setSupplementForm({ ...supplementForm, name: e.target.value })}
+                      onChange={(e) =>
+                        setSupplementForm({
+                          ...supplementForm,
+                          name: e.target.value,
+                        })
+                      }
                       placeholder="Ex.: Creatina"
                     />
                   </div>
@@ -1262,14 +1320,23 @@ async function toggleSupplementCheck(supplement) {
                     <label>Dosagem</label>
                     <input
                       value={supplementForm.dosage}
-                      onChange={(e) => setSupplementForm({ ...supplementForm, dosage: e.target.value })}
+                      onChange={(e) =>
+                        setSupplementForm({
+                          ...supplementForm,
+                          dosage: e.target.value,
+                        })
+                      }
                       placeholder="Ex.: 5g, 2 cápsulas"
                     />
                   </div>
                 </div>
 
                 <div className="action-row">
-                  <button className="clay-btn" type="button" onClick={saveSupplement}>
+                  <button
+                    className="clay-btn"
+                    type="button"
+                    onClick={addSupplementToCatalog}
+                  >
                     Adicionar à rotina
                   </button>
                 </div>
@@ -1285,7 +1352,9 @@ async function toggleSupplementCheck(supplement) {
                         <div key={item.id} className="manage-item clay-soft">
                           <div className="manage-item-body">
                             <strong>{item.name}</strong>
-                            <div className="muted">{item.dosage || "Sem dosagem"}</div>
+                            <div className="muted">
+                              {item.dosage || "Sem dosagem"}
+                            </div>
                             {checked?.checked_at && (
                               <div className="muted">
                                 Tomado: {formatDateTime(checked.checked_at)}
@@ -1325,13 +1394,25 @@ async function toggleSupplementCheck(supplement) {
               </div>
 
               <div className="quick-exercise-buttons">
-                <button className="clay-btn" type="button" onClick={() => addExerciseQuick("Musculação", 250)}>
+                <button
+                  className="clay-btn"
+                  type="button"
+                  onClick={() => addExerciseQuick("Musculação", 250)}
+                >
                   Musculação
                 </button>
-                <button className="clay-btn" type="button" onClick={() => addExerciseQuick("Esteira", 150)}>
+                <button
+                  className="clay-btn"
+                  type="button"
+                  onClick={() => addExerciseQuick("Esteira", 150)}
+                >
                   Esteira
                 </button>
-                <button className="clay-btn" type="button" onClick={() => addExerciseQuick("Bike", 200)}>
+                <button
+                  className="clay-btn"
+                  type="button"
+                  onClick={() => addExerciseQuick("Bike", 200)}
+                >
                   Bike
                 </button>
               </div>
@@ -1339,15 +1420,29 @@ async function toggleSupplementCheck(supplement) {
               <div className="exercise-inline">
                 <input
                   value={exerciseForm.exercise_name}
-                  onChange={(e) => setExerciseForm({ ...exerciseForm, exercise_name: e.target.value })}
+                  onChange={(e) =>
+                    setExerciseForm({
+                      ...exerciseForm,
+                      exercise_name: e.target.value,
+                    })
+                  }
                   placeholder="Ex.: Escada"
                 />
                 <input
                   value={exerciseForm.calories_burned}
-                  onChange={(e) => setExerciseForm({ ...exerciseForm, calories_burned: e.target.value })}
+                  onChange={(e) =>
+                    setExerciseForm({
+                      ...exerciseForm,
+                      calories_burned: e.target.value,
+                    })
+                  }
                   placeholder="kcal"
                 />
-                <button className="clay-btn icon-btn" type="button" onClick={saveExercise}>
+                <button
+                  className="clay-btn icon-btn"
+                  type="button"
+                  onClick={addExercise}
+                >
                   +
                 </button>
               </div>
@@ -1367,13 +1462,28 @@ async function toggleSupplementCheck(supplement) {
                 <div className="list-item clay-soft compact-item" key={item.id}>
                   <div>
                     <strong>{item.food_name}</strong>
-                    <div className="muted">{item.meal_slot_name} • {item.quantity_g} g • {item.calories} kcal</div>
-                    <div className="muted">{formatDateTime(item.created_at)}</div>
+                    <div className="muted">
+                      {item.meal_slot_name} • {item.quantity_g} g •{" "}
+                      {item.calories} kcal
+                    </div>
+                    <div className="muted">
+                      {formatDateTime(item.created_at)}
+                    </div>
                   </div>
 
                   <div className="actions-row">
-                    <button className="clay-btn" onClick={() => startEditMeal(item)}>Editar</button>
-                    <button className="clay-btn danger" onClick={() => deleteMeal(item.id)}>Excluir</button>
+                    <button
+                      className="clay-btn"
+                      onClick={() => startEditMeal(item)}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      className="clay-btn danger"
+                      onClick={() => deleteMeal(item.id)}
+                    >
+                      Excluir
+                    </button>
                   </div>
                 </div>
               ))
@@ -1389,12 +1499,24 @@ async function toggleSupplementCheck(supplement) {
                 <div className="list-item clay-soft compact-item" key={item.id}>
                   <div>
                     <strong>{item.amount_ml} ml</strong>
-                    <div className="muted">{formatDateTime(item.created_at)}</div>
+                    <div className="muted">
+                      {formatDateTime(item.created_at)}
+                    </div>
                   </div>
 
                   <div className="actions-row">
-                    <button className="clay-btn" onClick={() => startEditWater(item)}>Editar</button>
-                    <button className="clay-btn danger" onClick={() => deleteWater(item.id)}>Excluir</button>
+                    <button
+                      className="clay-btn"
+                      onClick={() => startEditWater(item)}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      className="clay-btn danger"
+                      onClick={() => deleteWater(item.id)}
+                    >
+                      Excluir
+                    </button>
                   </div>
                 </div>
               ))
@@ -1413,7 +1535,12 @@ async function toggleSupplementCheck(supplement) {
                 <label>Nome</label>
                 <input
                   value={profileForm.full_name}
-                  onChange={(e) => setProfileForm({ ...profileForm, full_name: e.target.value })}
+                  onChange={(e) =>
+                    setProfileForm({
+                      ...profileForm,
+                      full_name: e.target.value,
+                    })
+                  }
                 />
               </div>
 
@@ -1421,7 +1548,9 @@ async function toggleSupplementCheck(supplement) {
                 <label>Sexo</label>
                 <select
                   value={profileForm.sex}
-                  onChange={(e) => setProfileForm({ ...profileForm, sex: e.target.value })}
+                  onChange={(e) =>
+                    setProfileForm({ ...profileForm, sex: e.target.value })
+                  }
                 >
                   <option value="masculino">Masculino</option>
                   <option value="feminino">Feminino</option>
@@ -1432,7 +1561,9 @@ async function toggleSupplementCheck(supplement) {
                 <label>Idade</label>
                 <input
                   value={profileForm.age}
-                  onChange={(e) => setProfileForm({ ...profileForm, age: e.target.value })}
+                  onChange={(e) =>
+                    setProfileForm({ ...profileForm, age: e.target.value })
+                  }
                 />
               </div>
 
@@ -1440,7 +1571,12 @@ async function toggleSupplementCheck(supplement) {
                 <label>Peso (kg)</label>
                 <input
                   value={profileForm.weight_kg}
-                  onChange={(e) => setProfileForm({ ...profileForm, weight_kg: e.target.value })}
+                  onChange={(e) =>
+                    setProfileForm({
+                      ...profileForm,
+                      weight_kg: e.target.value,
+                    })
+                  }
                 />
               </div>
 
@@ -1448,7 +1584,12 @@ async function toggleSupplementCheck(supplement) {
                 <label>Altura (cm)</label>
                 <input
                   value={profileForm.height_cm}
-                  onChange={(e) => setProfileForm({ ...profileForm, height_cm: e.target.value })}
+                  onChange={(e) =>
+                    setProfileForm({
+                      ...profileForm,
+                      height_cm: e.target.value,
+                    })
+                  }
                 />
               </div>
 
@@ -1456,7 +1597,12 @@ async function toggleSupplementCheck(supplement) {
                 <label>Nível de atividade</label>
                 <select
                   value={profileForm.activity_level}
-                  onChange={(e) => setProfileForm({ ...profileForm, activity_level: e.target.value })}
+                  onChange={(e) =>
+                    setProfileForm({
+                      ...profileForm,
+                      activity_level: e.target.value,
+                    })
+                  }
                 >
                   <option value="sedentario">Sedentário</option>
                   <option value="leve">Leve</option>
@@ -1470,7 +1616,9 @@ async function toggleSupplementCheck(supplement) {
                 <label>Objetivo</label>
                 <select
                   value={profileForm.goal}
-                  onChange={(e) => setProfileForm({ ...profileForm, goal: e.target.value })}
+                  onChange={(e) =>
+                    setProfileForm({ ...profileForm, goal: e.target.value })
+                  }
                 >
                   <option value="emagrecer">Emagrecer</option>
                   <option value="manter">Manutenção</option>
@@ -1519,7 +1667,6 @@ async function toggleSupplementCheck(supplement) {
       )}
     </div>
   );
-
 }
 
 function EditableSlot({ slot, onRename, onDeactivate }) {
@@ -1536,8 +1683,17 @@ function EditableSlot({ slot, onRename, onDeactivate }) {
           <input value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div className="actions-row">
-          <button className="clay-btn" onClick={() => onRename(slot.id, name)}>Salvar</button>
-          {!slot.is_default && <button className="clay-btn danger" onClick={() => onDeactivate(slot.id)}>Remover</button>}
+          <button className="clay-btn" onClick={() => onRename(slot.id, name)}>
+            Salvar
+          </button>
+          {!slot.is_default && (
+            <button
+              className="clay-btn danger"
+              onClick={() => onDeactivate(slot.id)}
+            >
+              Remover
+            </button>
+          )}
         </div>
       </div>
     </div>
