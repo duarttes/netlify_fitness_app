@@ -35,6 +35,12 @@ export function DashboardPage({ session }) {
   const [profile, setProfile] = useState(null);
   const [foodSuggestions, setFoodSuggestions] = useState([]);
   const [editingFoodSuggestions, setEditingFoodSuggestions] = useState([]);
+  const [supplementCatalog, setSupplementCatalog] = useState([]);
+  const [supplementLogs, setSupplementLogs] = useState([]);
+  const [supplementForm, setSupplementForm] = useState({
+    name: "",
+    dosage: "",
+  });
 
   const [goals, setGoals] = useState({
     kcal: 2200,
@@ -108,55 +114,75 @@ export function DashboardPage({ session }) {
     const tomorrowStr = tomorrow.toISOString().slice(0, 10);
 
     const [
-  { data: slotData, error: slotError },
-  { data: foodData, error: foodError },
-  { data: mealData, error: mealError },
-  { data: waterData, error: waterError },
-  { data: profileData, error: profileError },
-  { data: dailyData, error: dailyError },
-  { data: exerciseData, error: exerciseError },
-] = await Promise.all([
-  supabase
-    .from("meal_slots")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .order("sort_order"),
-  supabase.from("food_catalog").select("*").order("name"),
-  supabase
-    .from("meal_entries")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("log_date", TODAY)
-    .order("created_at", { ascending: false }),
-  supabase
-    .from("water_entries")
-    .select("*")
-    .eq("user_id", userId)
-    .gte("created_at", `${TODAY}T00:00:00`)
-    .lt("created_at", `${tomorrowStr}T00:00:00`)
-    .order("created_at", { ascending: false }),
-  supabase
-    .from("user_profiles")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle(),
-  supabase
-    .from("daily_logs")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("log_date", TODAY)
-    .maybeSingle(),
-  supabase
-    .from("exercise_entries")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("log_date", TODAY)
-    .order("created_at", { ascending: false }),
-]);
+    { data: slotData, error: slotError },
+    { data: foodData, error: foodError },
+    { data: mealData, error: mealError },
+    { data: waterData, error: waterError },
+    { data: profileData, error: profileError },
+    { data: dailyData, error: dailyError },
+    { data: exerciseData, error: exerciseError },
+    { data: supplementCatalogData, error: supplementCatalogError },
+    { data: supplementLogsData, error: supplementLogsError },
+  ] = await Promise.all([
+    supabase
+      .from("meal_slots")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .order("sort_order"),
+    supabase.from("food_catalog").select("*").order("name"),
+    supabase
+      .from("meal_entries")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("log_date", TODAY)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("water_entries")
+      .select("*")
+      .eq("user_id", userId)
+      .gte("created_at", `${TODAY}T00:00:00`)
+      .lt("created_at", `${tomorrowStr}T00:00:00`)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("user_profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    supabase
+      .from("daily_logs")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("log_date", TODAY)
+      .maybeSingle(),
+    supabase
+      .from("exercise_entries")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("log_date", TODAY)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("supplement_catalog")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("supplement_logs")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("log_date", TODAY),
+  ]);
 
     const firstError =
-  slotError || foodError || mealError || waterError || profileError || dailyError || exerciseError;
+        slotError ||
+        foodError ||
+        mealError ||
+        waterError ||
+        profileError ||
+        dailyError ||
+        exerciseError ||
+        supplementCatalogError ||
+        supplementLogsError;
 
     if (firstError) {
       console.error(firstError);
@@ -170,6 +196,8 @@ export function DashboardPage({ session }) {
     setWaterEntries(waterData ?? []);
     setProfile(profileData ?? null);
     setExerciseEntries(exerciseData ?? []);
+    setSupplementCatalog(supplementCatalogData ?? []);
+    setSupplementLogs(supplementLogsData ?? []);
 
     if (profileData) {
       setProfileForm({
@@ -635,6 +663,65 @@ async function deleteExercise(id) {
   await loadAll();
 }
 
+async function addSupplementToCatalog() {
+  if (!supplementForm.name.trim()) return;
+
+  const { error } = await supabase.from("supplement_catalog").insert({
+    user_id: userId,
+    name: supplementForm.name,
+    dosage: supplementForm.dosage,
+  });
+
+  setStatus(error ? error.message : "Suplemento cadastrado.");
+  if (!error) {
+    setSupplementForm({ name: "", dosage: "" });
+  }
+  await loadAll();
+}
+
+function supplementCheckedToday(supplementId) {
+  return supplementLogs.find((item) => item.supplement_id === supplementId && item.checked);
+}
+
+async function toggleSupplementCheck(supplement) {
+  const existing = supplementLogs.find((item) => item.supplement_id === supplement.id);
+
+  if (existing) {
+    const { error } = await supabase
+      .from("supplement_logs")
+      .update({
+        checked: !existing.checked,
+        checked_at: !existing.checked ? new Date().toISOString() : null,
+      })
+      .eq("id", existing.id);
+
+    setStatus(error ? error.message : "Checklist atualizado.");
+  } else {
+    const { error } = await supabase.from("supplement_logs").insert({
+      user_id: userId,
+      supplement_id: supplement.id,
+      log_date: TODAY,
+      checked: true,
+      checked_at: new Date().toISOString(),
+    });
+
+    setStatus(error ? error.message : "Checklist atualizado.");
+  }
+
+  await loadAll();
+}
+
+  async function deleteSupplementCatalog(id) {
+    const { error } = await supabase
+      .from("supplement_catalog")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId);
+
+    setStatus(error ? error.message : "Suplemento removido.");
+    await loadAll();
+  }
+
   return (
     <div className="app-shell clay-bg">
       <div className="topbar">
@@ -646,17 +733,17 @@ async function deleteExercise(id) {
 
       {status && <div className="status-box clay-soft">{status}</div>}
 
-    <div className="tabs">
-      {["resumo", "lancamento", "perfil"].map((t) => (
-        <button
-          key={t}
-          className={activeTab === t ? "active clay-btn" : "clay-btn"}
-          onClick={() => setActiveTab(t)}
-        >
-          {t}
-        </button>
-      ))}
-    </div>
+      <div className="tabs">
+        {["resumo", "lancamento", "historico", "perfil"].map((t) => (
+          <button
+            key={t}
+            className={activeTab === t ? "active clay-btn" : "clay-btn"}
+            onClick={() => setActiveTab(t)}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
 
       {activeTab === "resumo" && (
         <div className="grid-2">
@@ -884,164 +971,6 @@ async function deleteExercise(id) {
               </div>
             </div>
           </div>
-
-          <div className="card clay-card">
-            <h2>Água lançada</h2>
-            {waterEntries.length === 0 ? (
-              <p>Nenhum registro.</p>
-            ) : (
-              waterEntries.map((item) => (
-                <div className="list-item clay-soft" key={item.id}>
-                  <div>
-                    <strong>{item.amount_ml} ml</strong>
-                    <div className="muted">{formatDateTime(item.created_at)}</div>
-                  </div>
-
-                  {editingWaterId === item.id ? (
-                    <div className="edit-actions">
-                      <input
-                        value={editingWaterValue}
-                        onChange={(e) => setEditingWaterValue(e.target.value)}
-                        placeholder="ml"
-                      />
-                      <button className="clay-btn" onClick={() => saveWaterEdit(item.id)}>Salvar</button>
-                      <button className="clay-btn" onClick={() => setEditingWaterId(null)}>Cancelar</button>
-                    </div>
-                  ) : (
-                    <div className="actions-row">
-                      <button className="clay-btn" onClick={() => startEditWater(item)}>Editar</button>
-                      <button className="clay-btn danger" onClick={() => deleteWater(item.id)}>Excluir</button>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="card clay-card wide">
-            <h2>Comidas lançadas</h2>
-            {meals.length === 0 ? (
-              <p>Nenhum alimento ainda.</p>
-            ) : (
-              meals.map((item) => (
-                <div className="list-item clay-soft meal-item" key={item.id}>
-                  {editingMealId === item.id ? (
-                    <div className="meal-edit-box">
-                      <div className="grid-2">
-                        <div>
-                          <label>Refeição</label>
-                          <select
-                            value={editingMealForm.meal_slot_id}
-                            onChange={(e) => setEditingMealForm({ ...editingMealForm, meal_slot_id: e.target.value })}
-                          >
-                            {slots.map((slot) => (
-                              <option key={slot.id} value={slot.id}>
-                                {slot.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label>Alimento</label>
-                          <input
-                            value={editingMealForm.food_name}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setEditingMealForm({ ...editingMealForm, food_name: value });
-                              updateEditingFoodSuggestions(value);
-                            }}
-                          />
-
-                          {editingFoodSuggestions.length > 0 && (
-                            <div className="suggestions-box">
-                              {editingFoodSuggestions.map((food) => (
-                                <button
-                                  type="button"
-                                  key={food.id}
-                                  className="suggestion-item"
-                                  onClick={() => selectEditingSuggestedFood(food)}
-                                >
-                                  <strong>{food.name}</strong>
-                                  <span>
-                                    {food.calories_100g} kcal • P {food.protein_100g} • C {food.carbs_100g} • G {food.fat_100g}
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        <div>
-                          <label>Peso</label>
-                          <input
-                            value={editingMealForm.quantity_g}
-                            onChange={(e) => setEditingMealForm({ ...editingMealForm, quantity_g: e.target.value })}
-                          />
-                        </div>
-
-                        <div className="edit-fill-button">
-                          <button className="clay-btn" onClick={autofillEditingMeal}>Preencher macros</button>
-                        </div>
-
-                        <div>
-                          <label>Kcal</label>
-                          <input
-                            value={editingMealForm.calories}
-                            onChange={(e) => setEditingMealForm({ ...editingMealForm, calories: e.target.value })}
-                          />
-                        </div>
-
-                        <div>
-                          <label>Proteína</label>
-                          <input
-                            value={editingMealForm.protein_g}
-                            onChange={(e) => setEditingMealForm({ ...editingMealForm, protein_g: e.target.value })}
-                          />
-                        </div>
-
-                        <div>
-                          <label>Carbo</label>
-                          <input
-                            value={editingMealForm.carbs_g}
-                            onChange={(e) => setEditingMealForm({ ...editingMealForm, carbs_g: e.target.value })}
-                          />
-                        </div>
-
-                        <div>
-                          <label>Gordura</label>
-                          <input
-                            value={editingMealForm.fat_g}
-                            onChange={(e) => setEditingMealForm({ ...editingMealForm, fat_g: e.target.value })}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="actions-row top-space">
-                        <button className="clay-btn" onClick={() => saveMealEdit(item.id)}>Salvar</button>
-                        <button className="clay-btn" onClick={() => setEditingMealId(null)}>Cancelar</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div>
-                        <strong>{item.meal_slot_name} • {item.food_name}</strong>
-                        <div className="muted">
-                          {item.quantity_g} g • {item.calories} kcal • P {item.protein_g} • C {item.carbs_g} • G {item.fat_g}
-                        </div>
-                        <div className="muted">Registrado em {formatDateTime(item.created_at)}</div>
-                      </div>
-
-                      <div className="actions-row">
-                        <button className="clay-btn" onClick={() => startEditMeal(item)}>Editar</button>
-                        <button className="clay-btn danger" onClick={() => deleteMeal(item.id)}>Excluir</button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
         </div>
       )}
 
@@ -1178,7 +1107,216 @@ async function deleteExercise(id) {
               <button className="clay-btn" onClick={addManualMeal}>Salvar manual</button>
             </div>
           </div>
+              <div className="card clay-card">
+                <h2>Remédios / manipulados / vitaminas</h2>
+
+                <div className="stack">
+                  <div className="grid-2">
+                    <div>
+                      <label>Nome</label>
+                      <input
+                        value={supplementForm.name}
+                        onChange={(e) => setSupplementForm({ ...supplementForm, name: e.target.value })}
+                        placeholder="Ex.: Creatina"
+                      />
+                    </div>
+
+                    <div>
+                      <label>Dosagem</label>
+                      <input
+                        value={supplementForm.dosage}
+                        onChange={(e) => setSupplementForm({ ...supplementForm, dosage: e.target.value })}
+                        placeholder="Ex.: 5g, 2 cápsulas"
+                      />
+                    </div>
+                  </div>
+
+                  <button className="clay-btn" onClick={addSupplementToCatalog}>
+                    Adicionar à rotina
+                  </button>
+                </div>
+
+                <div className="top-space">
+                  {supplementCatalog.length === 0 ? (
+                    <p>Nenhum item cadastrado.</p>
+                  ) : (
+                    supplementCatalog.map((item) => {
+                      const checked = supplementCheckedToday(item.id);
+
+                      return (
+                        <div className="list-item clay-soft compact-item" key={item.id}>
+                          <div>
+                            <strong>{item.name}</strong>
+                            <div className="muted">{item.dosage || "Sem dosagem"}</div>
+                            {checked?.checked_at && (
+                              <div className="muted">Tomado: {formatDateTime(checked.checked_at)}</div>
+                            )}
+                          </div>
+
+                          <div className="actions-row">
+                            <button
+                              className={`clay-btn ${checked ? "success" : ""}`}
+                              onClick={() => toggleSupplementCheck(item)}
+                            >
+                              {checked ? "Tomado" : "Marcar"}
+                            </button>
+
+                            <button
+                              className="clay-btn danger"
+                              onClick={() => deleteSupplementCatalog(item.id)}
+                            >
+                              Excluir
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+        
         </div>
+        
+        
+      )}
+
+      {activeTab === "historico" && (
+        <div className="grid-2">
+          <div className="card clay-card">
+            <h2>Histórico de comidas</h2>
+            {meals.length === 0 ? (
+              <p>Nenhum alimento ainda.</p>
+            ) : (
+              meals.map((item) => (
+                <div className="list-item clay-soft compact-item" key={item.id}>
+                  {editingMealId === item.id ? (
+                    <div className="meal-edit-box">
+                      <div className="grid-2">
+                        <div>
+                          <label>Refeição</label>
+                          <select
+                            value={editingMealForm.meal_slot_id}
+                            onChange={(e) => setEditingMealForm({ ...editingMealForm, meal_slot_id: e.target.value })}
+                          >
+                            {slots.map((slot) => (
+                              <option key={slot.id} value={slot.id}>
+                                {slot.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label>Alimento</label>
+                          <input
+                            value={editingMealForm.food_name}
+                            onChange={(e) => setEditingMealForm({ ...editingMealForm, food_name: e.target.value })}
+                          />
+                        </div>
+
+                        <div>
+                          <label>Peso</label>
+                          <input
+                            value={editingMealForm.quantity_g}
+                            onChange={(e) => setEditingMealForm({ ...editingMealForm, quantity_g: e.target.value })}
+                          />
+                        </div>
+
+                        <div className="edit-fill-button">
+                          <button className="clay-btn" onClick={autofillEditingMeal}>Preencher macros</button>
+                        </div>
+
+                        <div>
+                          <label>Kcal</label>
+                          <input
+                            value={editingMealForm.calories}
+                            onChange={(e) => setEditingMealForm({ ...editingMealForm, calories: e.target.value })}
+                          />
+                        </div>
+
+                        <div>
+                          <label>Proteína</label>
+                          <input
+                            value={editingMealForm.protein_g}
+                            onChange={(e) => setEditingMealForm({ ...editingMealForm, protein_g: e.target.value })}
+                          />
+                        </div>
+
+                        <div>
+                          <label>Carbo</label>
+                          <input
+                            value={editingMealForm.carbs_g}
+                            onChange={(e) => setEditingMealForm({ ...editingMealForm, carbs_g: e.target.value })}
+                          />
+                        </div>
+
+                        <div>
+                          <label>Gordura</label>
+                          <input
+                            value={editingMealForm.fat_g}
+                            onChange={(e) => setEditingMealForm({ ...editingMealForm, fat_g: e.target.value })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="actions-row top-space">
+                        <button className="clay-btn" onClick={() => saveMealEdit(item.id)}>Salvar</button>
+                        <button className="clay-btn" onClick={() => setEditingMealId(null)}>Cancelar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <strong>{item.food_name}</strong>
+                        <div className="muted">{item.meal_slot_name} • {item.quantity_g} g • {item.calories} kcal</div>
+                        <div className="muted">{formatDateTime(item.created_at)}</div>
+                      </div>
+
+                      <div className="actions-row">
+                        <button className="clay-btn" onClick={() => startEditMeal(item)}>Editar</button>
+                        <button className="clay-btn danger" onClick={() => deleteMeal(item.id)}>Excluir</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))
+            )}
+    </div>
+
+    <div className="card clay-card">
+      <h2>Histórico de água</h2>
+      {waterEntries.length === 0 ? (
+        <p>Nenhum registro.</p>
+      ) : (
+        waterEntries.map((item) => (
+          <div className="list-item clay-soft compact-item" key={item.id}>
+            <div>
+              <strong>{item.amount_ml} ml</strong>
+              <div className="muted">{formatDateTime(item.created_at)}</div>
+            </div>
+
+            {editingWaterId === item.id ? (
+              <div className="edit-actions">
+                <input
+                  value={editingWaterValue}
+                  onChange={(e) => setEditingWaterValue(e.target.value)}
+                  placeholder="ml"
+                />
+                <button className="clay-btn" onClick={() => saveWaterEdit(item.id)}>Salvar</button>
+                <button className="clay-btn" onClick={() => setEditingWaterId(null)}>Cancelar</button>
+              </div>
+            ) : (
+              <div className="actions-row">
+                <button className="clay-btn" onClick={() => startEditWater(item)}>Editar</button>
+                <button className="clay-btn danger" onClick={() => deleteWater(item.id)}>Excluir</button>
+              </div>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  </div>
+      
       )}
 
       {activeTab === "perfil" && (

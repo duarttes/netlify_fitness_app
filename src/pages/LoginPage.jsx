@@ -47,8 +47,7 @@ export function LoginPage() {
   return (
     <div className="auth-shell">
       <form className="auth-card" onSubmit={submit}>
-        <h1>Matheus Tracker v13</h1>
-        <p>Refeições fixas, mas editáveis, com macro automático</p>
+        <h1>DUFIT</h1>
         <div className="tabs">
           <button type="button" className={mode==="login"?"active":""} onClick={() => setMode("login")}>Entrar</button>
           <button type="button" className={mode==="signup"?"active":""} onClick={() => setMode("signup")}>Criar conta</button>

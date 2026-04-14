@@ -415,3 +415,23 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+.compact-item {
+  padding: 12px 14px;
+}
+
+.success {
+  color: #15803d;
+}
+
+.list-item.compact-item strong {
+  font-size: 14px;
+}
+
+.list-item.compact-item .muted {
+  font-size: 12px;
+}
+
+.card clay-card {
+  overflow: hidden;
+}
