@@ -53,6 +53,13 @@ export function DashboardPage({ session }) {
     dosage: "",
   });
 
+  const TAB_ITEMS = [
+  { id: "resumo", label: "Resumo" },
+  { id: "lancamento", label: "Lançar" },
+  { id: "historico", label: "Histórico" },
+  { id: "perfil", label: "Perfil" },
+];
+
   const [goals, setGoals] = useState({
     kcal: 2200,
     protein: 200,
@@ -831,22 +838,26 @@ async function toggleSupplementCheck(supplement) {
 
       {status && <div className="status-box clay-soft">{status}</div>}
 
-      <div className="tabs">
-        {["resumo", "lancamento", "historico", "perfil"].map((t) => (
-          <button
-            key={t}
-            className={activeTab === t ? "active clay-btn" : "clay-btn"}
-            onClick={() => setActiveTab(t)}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+        <div className="tabs">
+          {TAB_ITEMS.map((tab) => (
+            <button
+              key={tab.id}
+              className={activeTab === tab.id ? "active clay-btn tab-btn" : "clay-btn tab-btn"}
+              onClick={() => setActiveTab(tab.id)}
+              type="button"
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
       {activeTab === "resumo" && (
         <div className="summary-layout">
           <div className="card clay-card summary-hero">
-            <h2>Resumo do dia</h2>
+            <div className="section-head">
+              <h2>Resumo do dia</h2>
+              <span className="section-badge">Hoje</span>
+            </div>
 
             {profile && (
               <div className="profile-summary clay-soft">
@@ -864,119 +875,146 @@ async function toggleSupplementCheck(supplement) {
               <div className="metric-card clay-soft">
                 <div className="metric-title">Consumidas</div>
                 <div className="metric-value">{totals.kcal.toFixed(0)}</div>
+                <div className="metric-subtext">
+                  {Math.max(goals.kcal - totals.kcal, 0).toFixed(0)} kcal restantes
+                </div>
                 <FancyBar value={totals.kcal} max={goals.kcal} color="green" />
               </div>
 
               <div className="metric-card clay-soft">
                 <div className="metric-title">Gastas</div>
                 <div className="metric-value">{exerciseTotalKcal.toFixed(0)}</div>
+                <div className="metric-subtext">Treino e atividades</div>
                 <FancyBar value={exerciseTotalKcal} max={goals.kcal} color="orange" />
               </div>
 
               <div className="metric-card clay-soft">
                 <div className="metric-title">Líquidas</div>
                 <div className="metric-value">{netCalories.toFixed(0)}</div>
+                <div className="metric-subtext">Saldo do dia</div>
                 <FancyBar value={netCalories} max={goals.kcal} color="blue" />
               </div>
 
               <div className="metric-card clay-soft">
                 <div className="metric-title">Proteína</div>
                 <div className="metric-value">{totals.protein.toFixed(1)}g</div>
+                <div className="metric-subtext">
+                  {Math.max(goals.protein - totals.protein, 0).toFixed(1)}g restantes
+                </div>
                 <FancyBar value={totals.protein} max={goals.protein} color="purple" />
               </div>
 
               <div className="metric-card clay-soft">
                 <div className="metric-title">Água</div>
                 <div className="metric-value">{(waterTotalMl / 1000).toFixed(2)}L</div>
+                <div className="metric-subtext">
+                  {Math.min((waterTotalMl / 3000) * 100, 100).toFixed(0)}% da meta
+                </div>
                 <FancyBar value={waterTotalMl} max={3000} color="cyan" />
               </div>
             </div>
           </div>
 
-          <div className="card clay-card quick-card">
-            <h2>Ações rápidas</h2>
-
-            <div className="quick-water-buttons">
-              <button className="clay-btn" onClick={() => addWater(200)}>+200 ml</button>
-              <button className="clay-btn" onClick={() => addWater(300)}>+300 ml</button>
-              <button className="clay-btn" onClick={() => addWater(500)}>+500 ml</button>
-            </div>
-
-            <div className="quick-inline">
-              <input
-                value={waterInput}
-                onChange={(e) => setWaterInput(e.target.value)}
-                placeholder="ml"
-              />
-              <button className="clay-btn" onClick={addCustomWater}>Add</button>
-            </div>
-
-            <button className="clay-btn small-btn" onClick={saveGoals}>
-              Salvar metas
-            </button>
-          </div>
-
-          <div className="card clay-card">
-            <h2>Últimos registros</h2>
-
-            <div className="last-row">
-              <div className="last-register-card clay-soft">
-                <span className="badge water">Água</span>
-                {lastWater ? (
-                  <>
-                    <strong>{lastWater.amount_ml} ml</strong>
-                    <div className="muted">{formatDateTime(lastWater.created_at)}</div>
-                  </>
-                ) : (
-                  <div className="muted">Sem registro</div>
-                )}
+          <div className="summary-main">
+            <div className="card clay-card quick-card">
+              <div className="section-head">
+                <h2>Ações rápidas</h2>
+                <span className="section-badge">Água</span>
               </div>
 
-              <div className="last-register-card clay-soft">
-                <span className="badge food">Comida</span>
-                {lastMeal ? (
-                  <>
-                    <strong>{lastMeal.food_name}</strong>
-                    <div className="muted">{lastMeal.meal_slot_name}</div>
-                    <div className="muted">{formatDateTime(lastMeal.created_at)}</div>
-                  </>
-                ) : (
-                  <div className="muted">Sem registro</div>
-                )}
+              <div className="quick-water-buttons">
+                <button className="clay-btn" onClick={() => addWater(200)} type="button">+200 ml</button>
+                <button className="clay-btn" onClick={() => addWater(300)} type="button">+300 ml</button>
+                <button className="clay-btn" onClick={() => addWater(500)} type="button">+500 ml</button>
               </div>
+
+              <div className="quick-inline">
+                <input
+                  value={waterInput}
+                  onChange={(e) => setWaterInput(e.target.value)}
+                  placeholder="Quantidade em ml"
+                />
+                <button className="clay-btn" onClick={addCustomWater} type="button">
+                  Adicionar
+                </button>
+              </div>
+
+              <button className="clay-btn small-btn" onClick={saveGoals} type="button">
+                Salvar metas
+              </button>
             </div>
           </div>
 
-          <div className="card clay-card">
-            <h2>Suplementos do dia</h2>
+          <div className="summary-side">
+            <div className="card clay-card">
+              <div className="section-head">
+                <h2>Últimos registros</h2>
+                <span className="section-badge">Hoje</span>
+              </div>
 
-            <div className="supplement-grid">
-              {supplementCatalog.length === 0 ? (
-                <p>Nenhum suplemento cadastrado.</p>
-              ) : (
-                supplementCatalog.map((item) => {
-                  const checked = supplementCheckedToday(item.id);
+              <div className="last-row">
+                <div className="last-register-card clay-soft">
+                  <span className="badge water">Água</span>
+                  {lastWater ? (
+                    <>
+                      <strong>{lastWater.amount_ml} ml</strong>
+                      <div className="muted">{formatDateTime(lastWater.created_at)}</div>
+                    </>
+                  ) : (
+                    <div className="muted">Sem água registrada hoje</div>
+                  )}
+                </div>
 
-                  return (
-                    <button
-                      key={item.id}
-                      className={`supp-pill ${checked ? "checked" : ""}`}
-                      onClick={() => toggleSupplementCheck(item)}
-                    >
-                      <strong>{item.name}</strong>
-                      <span>{item.dosage || "Sem dosagem"}</span>
-                    </button>
-                  );
-                })
-              )}
+                <div className="last-register-card clay-soft">
+                  <span className="badge food">Comida</span>
+                  {lastMeal ? (
+                    <>
+                      <strong>{lastMeal.food_name}</strong>
+                      <div className="muted">{lastMeal.meal_slot_name}</div>
+                      <div className="muted">{formatDateTime(lastMeal.created_at)}</div>
+                    </>
+                  ) : (
+                    <div className="muted">Nenhuma refeição registrada hoje</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="card clay-card supplement-card">
+              <div className="section-head">
+                <h2>Suplementos do dia</h2>
+                <span className="section-count">{supplementCatalog.length}</span>
+              </div>
+
+              <div className="supplement-grid">
+                {supplementCatalog.length === 0 ? (
+                  <p>Nenhum suplemento cadastrado.</p>
+                ) : (
+                  supplementCatalog.map((item) => {
+                    const checked = supplementCheckedToday(item.id);
+
+                    return (
+                      <button
+                        key={item.id}
+                        className={`supp-pill ${checked ? "checked" : ""}`}
+                        onClick={() => toggleSupplementCheck(item)}
+                        type="button"
+                      >
+                        <strong>{item.name}</strong>
+                        <span>{item.dosage || "Sem dosagem"}</span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {activeTab === "lancamento" && (
-        <div className="grid-2">
-          <div className="card clay-card">
+        <div className="launch-layout">
+          <div className="launch-main">
             <h2>Lançamento inteligente</h2>
             <div className="stack">
             <div>
@@ -999,7 +1037,7 @@ async function toggleSupplementCheck(supplement) {
                   placeholder="Nova refeição"
                 />
 
-                <button className="clay-btn" onClick={addSlot}>+</button>
+                <button className="launch-side" onClick={addSlot}>+</button>
               </div>
             </div>
 
