@@ -89,54 +89,74 @@ export function DashboardPage({ session }) {
   const [editingWaterId, setEditingWaterId] = useState(null);
   const [editingWaterValue, setEditingWaterValue] = useState("");
 
+  const [exerciseEntries, setExerciseEntries] = useState([]);
+  const [exerciseForm, setExerciseForm] = useState({
+    exercise_name: "",
+    calories_burned: "",
+    notes: "",
+  });
+  const [editingExerciseId, setEditingExerciseId] = useState(null);
+  const [editingExerciseForm, setEditingExerciseForm] = useState({
+    exercise_name: "",
+    calories_burned: "",
+    notes: "",
+  });
+
   async function loadAll() {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().slice(0, 10);
 
     const [
-      { data: slotData, error: slotError },
-      { data: foodData, error: foodError },
-      { data: mealData, error: mealError },
-      { data: waterData, error: waterError },
-      { data: profileData, error: profileError },
-      { data: dailyData, error: dailyError },
-    ] = await Promise.all([
-      supabase
-        .from("meal_slots")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("is_active", true)
-        .order("sort_order"),
-      supabase.from("food_catalog").select("*").order("name"),
-      supabase
-        .from("meal_entries")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("log_date", TODAY)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("water_entries")
-        .select("*")
-        .eq("user_id", userId)
-        .gte("created_at", `${TODAY}T00:00:00`)
-        .lt("created_at", `${tomorrowStr}T00:00:00`)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("user_profiles")
-        .select("*")
-        .eq("user_id", userId)
-        .maybeSingle(),
-      supabase
-        .from("daily_logs")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("log_date", TODAY)
-        .maybeSingle(),
-    ]);
+  { data: slotData, error: slotError },
+  { data: foodData, error: foodError },
+  { data: mealData, error: mealError },
+  { data: waterData, error: waterError },
+  { data: profileData, error: profileError },
+  { data: dailyData, error: dailyError },
+  { data: exerciseData, error: exerciseError },
+] = await Promise.all([
+  supabase
+    .from("meal_slots")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .order("sort_order"),
+  supabase.from("food_catalog").select("*").order("name"),
+  supabase
+    .from("meal_entries")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("log_date", TODAY)
+    .order("created_at", { ascending: false }),
+  supabase
+    .from("water_entries")
+    .select("*")
+    .eq("user_id", userId)
+    .gte("created_at", `${TODAY}T00:00:00`)
+    .lt("created_at", `${tomorrowStr}T00:00:00`)
+    .order("created_at", { ascending: false }),
+  supabase
+    .from("user_profiles")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle(),
+  supabase
+    .from("daily_logs")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("log_date", TODAY)
+    .maybeSingle(),
+  supabase
+    .from("exercise_entries")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("log_date", TODAY)
+    .order("created_at", { ascending: false }),
+]);
 
     const firstError =
-      slotError || foodError || mealError || waterError || profileError || dailyError;
+  slotError || foodError || mealError || waterError || profileError || dailyError || exerciseError;
 
     if (firstError) {
       console.error(firstError);
@@ -149,6 +169,7 @@ export function DashboardPage({ session }) {
     setMeals(mealData ?? []);
     setWaterEntries(waterData ?? []);
     setProfile(profileData ?? null);
+    setExerciseEntries(exerciseData ?? []);
 
     if (profileData) {
       setProfileForm({
@@ -201,6 +222,12 @@ export function DashboardPage({ session }) {
       { kcal: 0, protein: 0, carbs: 0, fat: 0 }
     );
   }, [meals]);
+
+  const exerciseTotalKcal = useMemo(() => {
+    return exerciseEntries.reduce((acc, item) => acc + n(item.calories_burned), 0);
+  }, [exerciseEntries]);
+
+  const netCalories = Math.max(0, totals.kcal - exerciseTotalKcal);
 
   const waterTotalMl = useMemo(() => {
     return waterEntries.reduce((acc, item) => acc + n(item.amount_ml), 0);
@@ -554,6 +581,60 @@ function selectEditingSuggestedFood(food) {
     await supabase.auth.signOut();
   }
 
+  async function addExercise() {
+  if (!exerciseForm.exercise_name.trim()) return;
+
+  const { error } = await supabase.from("exercise_entries").insert({
+    user_id: userId,
+    log_date: TODAY,
+    exercise_name: exerciseForm.exercise_name,
+    calories_burned: n(exerciseForm.calories_burned),
+    notes: exerciseForm.notes,
+  });
+
+  setStatus(error ? error.message : "Exercício salvo.");
+  if (!error) {
+    setExerciseForm({ exercise_name: "", calories_burned: "", notes: "" });
+  }
+  await loadAll();
+}
+
+function startEditExercise(item) {
+  setEditingExerciseId(item.id);
+  setEditingExerciseForm({
+    exercise_name: item.exercise_name || "",
+    calories_burned: String(item.calories_burned || ""),
+    notes: item.notes || "",
+  });
+}
+
+async function saveExerciseEdit(id) {
+  const { error } = await supabase
+    .from("exercise_entries")
+    .update({
+      exercise_name: editingExerciseForm.exercise_name,
+      calories_burned: n(editingExerciseForm.calories_burned),
+      notes: editingExerciseForm.notes,
+    })
+    .eq("id", id)
+    .eq("user_id", userId);
+
+  setStatus(error ? error.message : "Exercício atualizado.");
+  if (!error) setEditingExerciseId(null);
+  await loadAll();
+}
+
+async function deleteExercise(id) {
+  const { error } = await supabase
+    .from("exercise_entries")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
+
+  setStatus(error ? error.message : "Exercício removido.");
+  await loadAll();
+}
+
   return (
     <div className="app-shell clay-bg">
       <div className="topbar">
@@ -565,17 +646,17 @@ function selectEditingSuggestedFood(food) {
 
       {status && <div className="status-box clay-soft">{status}</div>}
 
-      <div className="tabs">
-        {["resumo", "refeicoes", "lancamento", "perfil"].map((t) => (
-          <button
-            key={t}
-            className={activeTab === t ? "active clay-btn" : "clay-btn"}
-            onClick={() => setActiveTab(t)}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+    <div className="tabs">
+      {["resumo", "lancamento", "perfil"].map((t) => (
+        <button
+          key={t}
+          className={activeTab === t ? "active clay-btn" : "clay-btn"}
+          onClick={() => setActiveTab(t)}
+        >
+          {t}
+        </button>
+      ))}
+    </div>
 
       {activeTab === "resumo" && (
         <div className="grid-2">
@@ -596,7 +677,7 @@ function selectEditingSuggestedFood(food) {
 
             <div className="metric-block">
               <div className="metric-head">
-                <strong>Calorias</strong>
+                <strong>Calorias consumidas</strong>
                 <span>{totals.kcal.toFixed(0)} / {goals.kcal}</span>
               </div>
               <Progress value={totals.kcal} max={goals.kcal} color="green" />
@@ -604,26 +685,26 @@ function selectEditingSuggestedFood(food) {
 
             <div className="metric-block">
               <div className="metric-head">
+                <strong>Calorias gastas</strong>
+                <span>{exerciseTotalKcal.toFixed(0)}</span>
+              </div>
+              <Progress value={exerciseTotalKcal} max={goals.kcal} color="orange" />
+            </div>
+
+            <div className="metric-block">
+              <div className="metric-head">
+                <strong>Calorias líquidas</strong>
+                <span>{netCalories.toFixed(0)}</span>
+              </div>
+              <Progress value={netCalories} max={goals.kcal} color="blue" />
+            </div>
+
+            <div className="metric-block">
+              <div className="metric-head">
                 <strong>Proteína</strong>
                 <span>{totals.protein.toFixed(1)}g / {goals.protein}g</span>
               </div>
-              <Progress value={totals.protein} max={goals.protein} color="blue" />
-            </div>
-
-            <div className="metric-block">
-              <div className="metric-head">
-                <strong>Carbo</strong>
-                <span>{totals.carbs.toFixed(1)}g / {goals.carbs}g</span>
-              </div>
-              <Progress value={totals.carbs} max={goals.carbs} color="orange" />
-            </div>
-
-            <div className="metric-block">
-              <div className="metric-head">
-                <strong>Gordura</strong>
-                <span>{totals.fat.toFixed(1)}g / {goals.fat}g</span>
-              </div>
-              <Progress value={totals.fat} max={goals.fat} color="purple" />
+              <Progress value={totals.protein} max={goals.protein} color="purple" />
             </div>
 
             <div className="metric-block">
@@ -632,6 +713,99 @@ function selectEditingSuggestedFood(food) {
                 <span>{(waterTotalMl / 1000).toFixed(2)}L / 3.00L</span>
               </div>
               <Progress value={waterTotalMl} max={3000} color="cyan" />
+            </div>
+            <div className="card clay-card">
+              <h2>Exercícios do dia</h2>
+
+              <div className="stack">
+                <div>
+                  <label>Exercício</label>
+                  <input
+                    value={exerciseForm.exercise_name}
+                    onChange={(e) => setExerciseForm({ ...exerciseForm, exercise_name: e.target.value })}
+                    placeholder="Ex.: Musculação, Esteira"
+                  />
+                </div>
+
+                <div>
+                  <label>Calorias gastas</label>
+                  <input
+                    value={exerciseForm.calories_burned}
+                    onChange={(e) => setExerciseForm({ ...exerciseForm, calories_burned: e.target.value })}
+                    placeholder="Ex.: 80"
+                  />
+                </div>
+
+                <div>
+                  <label>Notas</label>
+                  <input
+                    value={exerciseForm.notes}
+                    onChange={(e) => setExerciseForm({ ...exerciseForm, notes: e.target.value })}
+                    placeholder="Opcional"
+                  />
+                </div>
+
+                <button className="clay-btn" onClick={addExercise}>Adicionar exercício</button>
+              </div>
+
+              <div className="top-space">
+                {exerciseEntries.length === 0 ? (
+                  <p>Nenhum exercício ainda.</p>
+                ) : (
+                  exerciseEntries.map((item) => (
+                    <div className="list-item clay-soft" key={item.id}>
+                      {editingExerciseId === item.id ? (
+                        <div className="meal-edit-box">
+                          <div className="grid-2">
+                            <div>
+                              <label>Exercício</label>
+                              <input
+                                value={editingExerciseForm.exercise_name}
+                                onChange={(e) => setEditingExerciseForm({ ...editingExerciseForm, exercise_name: e.target.value })}
+                              />
+                            </div>
+
+                            <div>
+                              <label>Calorias</label>
+                              <input
+                                value={editingExerciseForm.calories_burned}
+                                onChange={(e) => setEditingExerciseForm({ ...editingExerciseForm, calories_burned: e.target.value })}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="top-space">
+                            <label>Notas</label>
+                            <input
+                              value={editingExerciseForm.notes}
+                              onChange={(e) => setEditingExerciseForm({ ...editingExerciseForm, notes: e.target.value })}
+                            />
+                          </div>
+
+                          <div className="actions-row top-space">
+                            <button className="clay-btn" onClick={() => saveExerciseEdit(item.id)}>Salvar</button>
+                            <button className="clay-btn" onClick={() => setEditingExerciseId(null)}>Cancelar</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div>
+                            <strong>{item.exercise_name}</strong>
+                            <div className="muted">{item.calories_burned} kcal</div>
+                            {item.notes && <div className="muted">{item.notes}</div>}
+                            <div className="muted">{formatDateTime(item.created_at)}</div>
+                          </div>
+
+                          <div className="actions-row">
+                            <button className="clay-btn" onClick={() => startEditExercise(item)}>Editar</button>
+                            <button className="clay-btn danger" onClick={() => deleteExercise(item.id)}>Excluir</button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
 
@@ -871,44 +1045,14 @@ function selectEditingSuggestedFood(food) {
         </div>
       )}
 
-      {activeTab === "refeicoes" && (
-        <div className="grid-2">
-          <div className="card clay-card">
-            <h2>Tipos de refeição</h2>
-            <div className="stack">
-              <div>
-                <label>Novo tipo</label>
-                <input
-                  value={slotForm.name}
-                  onChange={(e) => setSlotForm({ name: e.target.value })}
-                  placeholder="Ex.: pós-treino"
-                />
-              </div>
-              <button className="clay-btn" onClick={addSlot}>Adicionar novo tipo</button>
-            </div>
-          </div>
-
-          <div className="card clay-card">
-            <h2>Editar tipos padrão</h2>
-            {slots.map((slot) => (
-              <EditableSlot
-                key={slot.id}
-                slot={slot}
-                onRename={renameSlot}
-                onDeactivate={deactivateSlot}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
       {activeTab === "lancamento" && (
         <div className="grid-2">
           <div className="card clay-card">
             <h2>Lançamento inteligente</h2>
             <div className="stack">
-              <div>
-                <label>Refeição</label>
+            <div>
+              <label>Refeição</label>
+              <div className="inline-slot-row">
                 <select
                   value={smartForm.slotId}
                   onChange={(e) => setSmartForm({ ...smartForm, slotId: e.target.value })}
@@ -919,7 +1063,16 @@ function selectEditingSuggestedFood(food) {
                     </option>
                   ))}
                 </select>
+
+                <input
+                  value={slotForm.name}
+                  onChange={(e) => setSlotForm({ name: e.target.value })}
+                  placeholder="Nova refeição"
+                />
+
+                <button className="clay-btn" onClick={addSlot}>+</button>
               </div>
+            </div>
 
               <div>
                 <label>Digite alimento + peso</label>
@@ -937,8 +1090,9 @@ function selectEditingSuggestedFood(food) {
           <div className="card clay-card">
             <h2>Lançamento manual</h2>
             <div className="stack">
-              <div>
-                <label>Refeição</label>
+            <div>
+              <label>Refeição</label>
+              <div className="inline-slot-row">
                 <select
                   value={manualForm.slotId}
                   onChange={(e) => setManualForm({ ...manualForm, slotId: e.target.value })}
@@ -949,7 +1103,16 @@ function selectEditingSuggestedFood(food) {
                     </option>
                   ))}
                 </select>
+
+                <input
+                  value={slotForm.name}
+                  onChange={(e) => setSlotForm({ name: e.target.value })}
+                  placeholder="Nova refeição"
+                />
+
+                <button className="clay-btn" onClick={addSlot}>+</button>
               </div>
+            </div>
 
             <div>
               <label>Ingrediente</label>
