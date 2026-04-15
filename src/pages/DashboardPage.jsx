@@ -55,7 +55,7 @@ export function DashboardPage({ session }) {
   const [editingFoodSuggestions, setEditingFoodSuggestions] = useState([]);
   const [supplementCatalog, setSupplementCatalog] = useState([]);
   const [supplementLogs, setSupplementLogs] = useState([]);
-
+  const [batchPreview, setBatchPreview] = useState([]);
   const [supplementForm, setSupplementForm] = useState({
     name: "",
     dosage: "",
@@ -784,6 +784,85 @@ export function DashboardPage({ session }) {
     await loadAll();
   }
 
+  const FOOD_DB = [
+    { name: "ovo", kcal: 70, protein: 6, carbs: 1, fat: 5, unit: "unit" },
+    { name: "banana", kcal: 89, protein: 1.1, carbs: 23, fat: 0.3, unit: "g" },
+    { name: "arroz", kcal: 130, protein: 2.5, carbs: 28, fat: 0.3, unit: "g" },
+    { name: "feijao", kcal: 77, protein: 5, carbs: 14, fat: 0.5, unit: "g" },
+    { name: "frango", kcal: 165, protein: 31, carbs: 0, fat: 3.6, unit: "g" },
+    { name: "pao", kcal: 265, protein: 9, carbs: 49, fat: 3.2, unit: "g" },
+  ];
+
+      function normalize(text) {
+      return text
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .trim();
+    }
+
+    function parseBatchInput(text) {
+      return text
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    function extractQuantity(item) {
+      const matchG = item.match(/(\d+)\s*g/);
+      if (matchG) {
+        return { value: Number(matchG[1]), unit: "g" };
+      }
+
+      const matchUnit = item.match(/(\d+)\s*(un|ovo|ovos|banana|maça|maca)?/);
+      if (matchUnit) {
+        return { value: Number(matchUnit[1]), unit: "unit" };
+      }
+
+      return { value: 100, unit: "g" }; // default
+    }
+
+      function findFood(name) {
+        const normalized = normalize(name);
+
+        return FOOD_DB.find((f) =>
+          normalized.includes(f.name)
+        );
+      }
+
+      function processBatch(text) {
+        const items = parseBatchInput(text);
+
+        return items.map((item) => {
+          const qty = extractQuantity(item);
+          const food = findFood(item);
+
+          if (!food) {
+            return {
+              name: item,
+              error: true,
+            };
+          }
+
+          let factor = 1;
+
+          if (food.unit === "g") {
+            factor = qty.value / 100;
+          } else {
+            factor = qty.value;
+          }
+
+          return {
+            name: food.name,
+            qty: qty.value,
+            kcal: food.kcal * factor,
+            protein: food.protein * factor,
+            carbs: food.carbs * factor,
+            fat: food.fat * factor,
+          };
+        });
+      }
+
   return (
     <div className="app-shell clay-bg">
       <div className="topbar">
@@ -1070,14 +1149,58 @@ export function DashboardPage({ session }) {
                             }
                             placeholder="Nova refeição"
                           />
-                          <button
-                            className="clay-btn icon-btn"
-                            type="button"
-                            onClick={addSlot}
-                            aria-label="Criar refeição"
-                          >
-                            +
-                          </button>
+                            {batchPreview.length > 0 && (
+                            <div className="card clay-soft">
+                              <h3>Preview</h3>
+
+                              {batchPreview.map((item, idx) => (
+                                <div key={idx} className="list-item">
+                                  {item.error ? (
+                                    <span style={{ color: "red" }}>
+                                      ❌ {item.name} não encontrado
+                                    </span>
+                                  ) : (
+                                    <>
+                                      <strong>{item.name}</strong> ({item.qty})
+                                      <div className="muted">
+                                        {item.kcal.toFixed(0)} kcal • P {item.protein.toFixed(1)}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              ))}
+
+                              <div style={{ marginTop: 10 }}>
+                                <strong>
+                                  Total:{" "}
+                                  {batchPreview
+                                    .reduce((sum, i) => sum + (i.kcal || 0), 0)
+                                    .toFixed(0)} kcal
+                                </strong>
+                              </div>
+                            </div>
+                              )}
+                            <button
+                              className="clay-btn"
+                              onClick={() => {
+                                batchPreview.forEach((item) => {
+                                  if (!item.error) {
+                                    addManualMeal({
+                                      food_name: item.name,
+                                      calories: item.kcal,
+                                      protein_g: item.protein,
+                                      carbs_g: item.carbs,
+                                      fat_g: item.fat,
+                                    });
+                                  }
+                                });
+
+                                setBatchPreview([]);
+                                setSmartForm({ ...smartForm, text: "" });
+                              }}
+                            >
+                              Salvar refeição
+                            </button>  
                         </div>
                       </div>
                     </div>
@@ -1097,15 +1220,30 @@ export function DashboardPage({ session }) {
                       </div>
                     </div>
 
-                    <div className="action-row">
-                      <button
-                        className="clay-btn"
-                        type="button"
-                        onClick={addSmartMeal}
-                      >
-                        Adicionar com inteligência
-                      </button>
+                    <div>
+                                                  <button
+                              className="clay-btn"
+                              onClick={() => {
+                                const result = processBatch(smartForm.text);
+                                setBatchPreview(result);
+                              }}
+                            >
+                              Analisar alimentos
+                            </button>                    
+                      
+                      <div className="action-row">
+                        <button
+                          className="clay-btn"
+                          type="button"
+                          onClick={addSmartMeal}
+                        >
+                          Adicionar com inteligência
+                        </button>
+                    </div> 
+                    
                     </div>
+
+                  
                   </div>
                 </div>
 
