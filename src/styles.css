@@ -689,3 +689,28 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+.batch-preview {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.preview-item {
+  display: flex;
+  justify-content: space-between;
+}
+
+.preview-total {
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+.slot-item {
+  display: grid;
+  gap: 6px;
+}
+
+.error {
+  color: red;
+}
