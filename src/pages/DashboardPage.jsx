@@ -53,6 +53,7 @@ export function DashboardPage({ session }) {
   const [profile, setProfile] = useState(null);
   const [foodSuggestions, setFoodSuggestions] = useState([]);
   const [editingFoodSuggestions, setEditingFoodSuggestions] = useState([]);
+  const [selectedSlotId, setSelectedSlotId] = useState(null);
   const [supplementCatalog, setSupplementCatalog] = useState([]);
   const [supplementLogs, setSupplementLogs] = useState([]);
   const [batchPreview, setBatchPreview] = useState([]);
@@ -1109,6 +1110,20 @@ export function DashboardPage({ session }) {
 
           {/* ESQUERDA */}
           <div className="launch-main">
+            <select value={selectedSlotId || ""} onChange={(e) => setSelectedSlotId(e.target.value)}
+              >
+              <option value="">Selecione a refeição</option>
+              {slots.map((slot) => (
+                <option key={slot.id} value={slot.id}>
+                  {slot.name}
+                </option>
+              ))}
+            </select>
+            {selectedSlotId && (
+              <div className="selected-meal">
+                🍽️ {slots.find((s) => s.id === selectedSlotId)?.name}
+              </div>
+            )}
 
             {/* LOTE / INTELIGENTE */}
             <div className="card clay-card">
@@ -1128,9 +1143,14 @@ export function DashboardPage({ session }) {
                   onClick={() => {
                     const result = processBatch(smartForm.text);
                     setBatchPreview(result);
+                    if (!selectedSlotId) {
+                      alert("Selecione uma refeição primeiro");
+                      return;
+                    }
                   }}
                 >
                   Analisar
+                  
                 </button>
               </div>
 
@@ -1170,6 +1190,7 @@ export function DashboardPage({ session }) {
                             protein_g: item.protein,
                             carbs_g: item.carbs,
                             fat_g: item.fat,
+                            meal_slot_id: selectedSlotId,
                           });
                         }
                       });
@@ -1239,7 +1260,7 @@ export function DashboardPage({ session }) {
                   />
                 </div>
 
-                <button className="clay-btn" onClick={addManualMeal}>
+                <button className="clay-btn" onClick={addManualMeal({...manualForm, meal_slot_id: selectedSlotId,                                                      })}>
                   Salvar manual
                 </button>
               </div>
