@@ -290,6 +290,16 @@ export function DashboardPage({ session }) {
     return waterEntries.reduce((acc, item) => acc + n(item.amount_ml), 0);
   }, [waterEntries]);
 
+  const historyEntries = useMemo(() => {
+    return [
+      ...meals.map((item) => ({ ...item, type: "meal" })),
+      ...waterEntries.map((item) => ({ ...item, type: "water" })),
+      ...exerciseEntries.map((item) => ({ ...item, type: "exercise" })),
+    ]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 5);
+  }, [meals, waterEntries, exerciseEntries]);
+
   const lastMeal = meals[0] || null;
   const lastWater = waterEntries[0] || null;
 
@@ -1407,7 +1417,6 @@ export function DashboardPage({ session }) {
                 >
                   Musculação
                 </button>
-
                 <button
                   className="clay-btn"
                   type="button"
@@ -1421,7 +1430,6 @@ export function DashboardPage({ session }) {
                 >
                   Esteira
                 </button>
-
                 <button
                   className="clay-btn"
                   type="button"
@@ -1474,73 +1482,126 @@ export function DashboardPage({ session }) {
       {activeTab === "historico" && (
         <div className="grid-2">
           <div className="card clay-card">
-            <h2>Histórico de comidas</h2>
-            {meals.length === 0 ? (
-              <p>Nenhum alimento ainda.</p>
-            ) : (
-              meals.map((item) => (
-                <div className="list-item clay-soft compact-item" key={item.id}>
-                  <div>
-                    <strong>{item.food_name}</strong>
-                    <div className="muted">
-                      {item.meal_slot_name} • {item.quantity_g} g •{" "}
-                      {item.calories} kcal
-                    </div>
-                    <div className="muted">
-                      {formatDateTime(item.created_at)}
-                    </div>
-                  </div>
+            <div className="section-head">
+              <h2>Últimos lançamentos</h2>
+              <span className="section-badge">5 itens</span>
+            </div>
 
-                  <div className="actions-row">
-                    <button
-                      className="clay-btn"
-                      onClick={() => startEditMeal(item)}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      className="clay-btn danger"
-                      onClick={() => deleteMeal(item.id)}
-                    >
-                      Excluir
-                    </button>
+            {historyEntries.length === 0 ? (
+              <p>Nenhum lançamento ainda.</p>
+            ) : (
+              <div className="list">
+                {historyEntries.map((item) => (
+                  <div className="list-item clay-soft compact-item" key={`${item.type}-${item.id}`}>
+                    <div className="list-item-header">
+                      <strong>
+                        {item.type === "meal" && item.food_name}
+                        {item.type === "water" && `${item.amount_ml} ml de água`}
+                        {item.type === "exercise" && item.exercise_name}
+                      </strong>
+                      <span className="muted">{formatDateTime(item.created_at)}</span>
+                    </div>
+
+                    <div className="muted">
+                      {item.type === "meal" &&
+                        `${item.meal_slot_name} • ${item.quantity_g} g • ${item.calories} kcal`}
+                      {item.type === "water" && "Hidratação"}
+                      {item.type === "exercise" &&
+                        `${item.calories_burned} kcal${item.notes ? ` • ${item.notes}` : ""}`}
+                    </div>
+
+                    <div className="actions-row">
+                      {item.type === "meal" && (
+                        <>
+                          <button
+                            className="clay-btn"
+                            onClick={() => startEditMeal(item)}
+                            type="button"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            className="clay-btn danger"
+                            onClick={() => deleteMeal(item.id)}
+                            type="button"
+                          >
+                            Excluir
+                          </button>
+                        </>
+                      )}
+
+                      {item.type === "water" && (
+                        <>
+                          <button
+                            className="clay-btn"
+                            onClick={() => startEditWater(item)}
+                            type="button"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            className="clay-btn danger"
+                            onClick={() => deleteWater(item.id)}
+                            type="button"
+                          >
+                            Excluir
+                          </button>
+                        </>
+                      )}
+
+                      {item.type === "exercise" && (
+                        <>
+                          <button
+                            className="clay-btn"
+                            onClick={() => startEditExercise(item)}
+                            type="button"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            className="clay-btn danger"
+                            onClick={() => deleteExercise(item.id)}
+                            type="button"
+                          >
+                            Excluir
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
 
           <div className="card clay-card">
-            <h2>Histórico de água</h2>
-            {waterEntries.length === 0 ? (
-              <p>Nenhum registro.</p>
-            ) : (
-              waterEntries.map((item) => (
-                <div className="list-item clay-soft compact-item" key={item.id}>
-                  <div>
-                    <strong>{item.amount_ml} ml</strong>
-                    <div className="muted">
-                      {formatDateTime(item.created_at)}
-                    </div>
-                  </div>
+            <div className="section-head">
+              <h2>Resumo do histórico</h2>
+              <span className="section-badge">Hoje</span>
+            </div>
 
-                  <div className="actions-row">
-                    <button
-                      className="clay-btn"
-                      onClick={() => startEditWater(item)}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      className="clay-btn danger"
-                      onClick={() => deleteWater(item.id)}
-                    >
-                      Excluir
-                    </button>
-                  </div>
+            <div className="stack">
+              <div className="metric-block">
+                <div className="metric-head">
+                  <strong>Comidas</strong>
+                  <span>{meals.length}</span>
                 </div>
-              ))
-            )}
+              </div>
+
+              <div className="metric-block">
+                <div className="metric-head">
+                  <strong>Água</strong>
+                  <span>{waterEntries.length}</span>
+                </div>
+              </div>
+
+              <div className="metric-block">
+                <div className="metric-head">
+                  <strong>Exercícios</strong>
+                  <span>{exerciseEntries.length}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
