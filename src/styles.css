@@ -37,6 +37,11 @@ button {
   color: inherit;
 }
 
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 input,
 select,
 textarea {
@@ -55,11 +60,6 @@ textarea {
 textarea {
   resize: vertical;
   min-height: 112px;
-}
-
-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
 }
 
 label {
@@ -106,6 +106,10 @@ h1 {
 
 .label-hidden {
   visibility: hidden;
+}
+
+.top-space {
+  margin-top: 12px;
 }
 
 .app-shell {
@@ -225,7 +229,8 @@ h1 {
   padding: 0;
 }
 
-.danger-btn {
+.danger-btn,
+.danger {
   color: #b91c1c;
 }
 
@@ -289,8 +294,25 @@ h1 {
   flex-wrap: wrap;
 }
 
+.actions-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
 .compact-item {
   padding: 12px 14px;
+}
+
+.list {
+  display: grid;
+  gap: 10px;
+}
+
+.list-item {
+  padding: 14px;
+  border-radius: 20px;
 }
 
 .list-item.compact-item strong {
@@ -312,6 +334,7 @@ h1 {
   margin-bottom: 6px;
 }
 
+/* Resumo */
 .summary-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.85fr);
@@ -364,6 +387,22 @@ h1 {
   font-size: 12px;
   color: #64748b;
   margin-bottom: 8px;
+}
+
+.metric-block {
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.metric-block:last-child {
+  border-bottom: 0;
+}
+
+.metric-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
 }
 
 .metric-head strong {
@@ -453,7 +492,7 @@ h1 {
   background: #e9eef5;
   box-shadow:
     5px 5px 10px rgba(163, 177, 198, 0.3),
-    -5px -5px 10px rgba(255, 255, 255, 0.75);
+    -5px -4px 10px rgba(255, 255, 255, 0.75);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -466,6 +505,8 @@ h1 {
   color: white;
 }
 
+/* Barras */
+.progress-track,
 .fancy-bar {
   height: 16px;
   border-radius: 20px;
@@ -476,14 +517,11 @@ h1 {
     inset -3px -3px 8px rgba(255, 255, 255, 0.9);
 }
 
+.progress-fill,
 .fancy-fill {
   height: 100%;
   border-radius: 20px;
   transition: width 0.3s ease;
-}
-
-.progress-track {
-  height: 14px;
 }
 
 .progress-fill.green,
@@ -511,7 +549,7 @@ h1 {
   background: linear-gradient(90deg, #06b6d4, #0891b2);
 }
 
-/* Lançamento v20 */
+/* Lançamento */
 .launch-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
@@ -620,22 +658,8 @@ h1 {
   gap: 8px;
 }
 
-/* Histórico / listas */
-.list {
-  display: grid;
-  gap: 10px;
-}
-
-.list-item {
-  padding: 14px;
-  border-radius: 20px;
-}
-
-.list-item-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 8px;
+.slot-edit-grid {
+  align-items: end;
 }
 
 /* Perfil */
@@ -675,7 +699,8 @@ h1 {
   .quick-inline,
   .manual-grid,
   .exercise-inline,
-  .targets-grid {
+  .targets-grid,
+  .slot-edit-grid {
     grid-template-columns: 1fr;
   }
 
