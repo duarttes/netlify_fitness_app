@@ -108,10 +108,6 @@ h1 {
   visibility: hidden;
 }
 
-.top-space {
-  margin-top: 12px;
-}
-
 .app-shell {
   max-width: 1280px;
   margin: 0 auto;
@@ -229,8 +225,7 @@ h1 {
   padding: 0;
 }
 
-.danger-btn,
-.danger {
+.danger-btn {
   color: #b91c1c;
 }
 
@@ -294,17 +289,6 @@ h1 {
   flex-wrap: wrap;
 }
 
-.actions-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 8px;
-}
-
-.compact-item {
-  padding: 12px 14px;
-}
-
 .list {
   display: grid;
   gap: 10px;
@@ -315,12 +299,12 @@ h1 {
   border-radius: 20px;
 }
 
-.list-item.compact-item strong {
-  font-size: 14px;
-}
-
-.list-item.compact-item .muted {
-  font-size: 12px;
+.list-item-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 6px;
 }
 
 .profile-summary {
@@ -334,7 +318,6 @@ h1 {
   margin-bottom: 6px;
 }
 
-/* Resumo */
 .summary-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.85fr);
@@ -387,31 +370,6 @@ h1 {
   font-size: 12px;
   color: #64748b;
   margin-bottom: 8px;
-}
-
-.metric-block {
-  padding: 14px 0;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
-}
-
-.metric-block:last-child {
-  border-bottom: 0;
-}
-
-.metric-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-}
-
-.metric-head strong {
-  font-size: 15px;
-}
-
-.metric-head span {
-  font-size: 14px;
-  color: #475569;
 }
 
 .quick-card {
@@ -492,7 +450,7 @@ h1 {
   background: #e9eef5;
   box-shadow:
     5px 5px 10px rgba(163, 177, 198, 0.3),
-    -5px -4px 10px rgba(255, 255, 255, 0.75);
+    -5px -5px 10px rgba(255, 255, 255, 0.75);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -505,7 +463,6 @@ h1 {
   color: white;
 }
 
-/* Barras */
 .progress-track,
 .fancy-bar {
   height: 16px;
@@ -549,7 +506,6 @@ h1 {
   background: linear-gradient(90deg, #06b6d4, #0891b2);
 }
 
-/* Lançamento */
 .launch-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
@@ -658,11 +614,6 @@ h1 {
   gap: 8px;
 }
 
-.slot-edit-grid {
-  align-items: end;
-}
-
-/* Perfil */
 .profile-grid {
   display: grid;
   gap: 12px;
@@ -680,7 +631,6 @@ h1 {
   text-align: center;
 }
 
-/* Responsivo */
 @media (max-width: 1100px) {
   .metric-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -699,8 +649,7 @@ h1 {
   .quick-inline,
   .manual-grid,
   .exercise-inline,
-  .targets-grid,
-  .slot-edit-grid {
+  .targets-grid {
     grid-template-columns: 1fr;
   }
 
